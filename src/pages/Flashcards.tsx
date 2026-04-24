@@ -1,4 +1,4 @@
-// Flashcards — AI generated, smooth flip without inverted text.
+// Flashcards — AI generated, save full deck to Supabase.
 import { useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { Layers, Sparkles, ChevronLeft, ChevronRight, RotateCcw, Save, Trash2 } from "lucide-react";
@@ -7,10 +7,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { callAI } from "@/lib/ai";
 import { toast } from "sonner";
-import { useFlashcardDecks, newId } from "@/lib/store";
+import { useFlashcardDecks, useFlashcardMutations } from "@/lib/store";
 import { motion } from "framer-motion";
 
-type Card = { front: string; back: string };
+type Card = { question: string; answer: string };
 
 export default function Flashcards() {
   const [topic, setTopic] = useState("");
@@ -18,7 +18,8 @@ export default function Flashcards() {
   const [cards, setCards] = useState<Card[]>([]);
   const [idx, setIdx] = useState(0);
   const [flipped, setFlipped] = useState(false);
-  const [decks, setDecks] = useFlashcardDecks();
+  const { decks } = useFlashcardDecks();
+  const { saveDeck, removeDeck } = useFlashcardMutations();
 
   const generate = async () => {
     if (!topic.trim()) return;
@@ -27,8 +28,9 @@ export default function Flashcards() {
     setIdx(0);
     setFlipped(false);
     try {
-      const data = await callAI<{ cards: Card[] }>({ mode: "flashcards", prompt: topic });
-      setCards(data.cards || []);
+      const data = await callAI<{ cards: { front: string; back: string }[] }>({ mode: "flashcards", prompt: topic });
+      const mapped = (data.cards || []).map((c) => ({ question: c.front, answer: c.back }));
+      setCards(mapped);
     } catch (e: any) {
       toast.error(e.message || "Flashcard generation failed");
     } finally {
@@ -44,10 +46,15 @@ export default function Flashcards() {
     setFlipped(false);
     setTimeout(() => setIdx((i) => (i - 1 + cards.length) % cards.length), 50);
   };
-  const saveDeck = () => {
-    if (!cards.length) return;
-    setDecks([...decks, { id: newId(), title: topic, cards, createdAt: new Date().toISOString() }]);
-    toast.success("Deck saved");
+  const handleSave = () => {
+    if (!cards.length || !topic.trim()) return;
+    saveDeck.mutate(
+      { title: topic, cards },
+      {
+        onSuccess: () => toast.success("Deck saved"),
+        onError: (e: any) => toast.error(e.message),
+      }
+    );
   };
 
   return (
@@ -93,14 +100,14 @@ export default function Flashcards() {
               <div className="flip-face absolute inset-0 flex items-center justify-center rounded-3xl border border-border/50 bg-gradient-to-br from-card to-secondary p-8 text-center shadow-elevated">
                 <div className="space-y-3">
                   <div className="text-xs uppercase tracking-widest text-muted-foreground">Question</div>
-                  <div className="text-xl font-semibold leading-snug">{cards[idx].front}</div>
+                  <div className="text-xl font-semibold leading-snug">{cards[idx].question}</div>
                   <div className="pt-2 text-xs text-muted-foreground">Tap to reveal</div>
                 </div>
               </div>
               <div className="flip-face flip-back absolute inset-0 flex items-center justify-center rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-accent/10 p-8 text-center shadow-elevated">
                 <div className="space-y-3">
                   <div className="text-xs uppercase tracking-widest text-primary">Answer</div>
-                  <div className="text-lg font-medium leading-relaxed">{cards[idx].back}</div>
+                  <div className="text-lg font-medium leading-relaxed">{cards[idx].answer}</div>
                 </div>
               </div>
             </motion.div>
@@ -116,7 +123,7 @@ export default function Flashcards() {
             <Button variant="outline" size="icon" onClick={next} className="rounded-full">
               <ChevronRight className="h-4 w-4" />
             </Button>
-            <Button variant="outline" onClick={saveDeck}>
+            <Button variant="outline" onClick={handleSave} disabled={saveDeck.isPending}>
               <Save className="mr-2 h-4 w-4" /> Save deck
             </Button>
           </div>
@@ -128,7 +135,7 @@ export default function Flashcards() {
           <h3 className="mb-3 text-sm font-semibold text-muted-foreground">Saved decks</h3>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {decks.map((d) => (
-              <Card key={d.id} className="border-border/50 shadow-soft transition-all hover:shadow-elevated">
+              <Card key={d.title} className="border-border/50 shadow-soft transition-all hover:shadow-elevated">
                 <CardContent className="space-y-2 p-4">
                   <div className="flex items-start justify-between gap-2">
                     <div className="font-semibold">{d.title}</div>
@@ -136,7 +143,7 @@ export default function Flashcards() {
                       variant="ghost"
                       size="icon"
                       className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                      onClick={() => setDecks(decks.filter((x) => x.id !== d.id))}
+                      onClick={() => removeDeck.mutate(d.title)}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
@@ -147,7 +154,7 @@ export default function Flashcards() {
                     variant="outline"
                     className="w-full"
                     onClick={() => {
-                      setCards(d.cards);
+                      setCards(d.cards.map((c) => ({ question: c.question, answer: c.answer })));
                       setTopic(d.title);
                       setIdx(0);
                       setFlipped(false);

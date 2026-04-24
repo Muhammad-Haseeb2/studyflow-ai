@@ -1,5 +1,5 @@
-// AI Notes Maker — generate, edit, save, export.
-import { useState } from "react";
+// AI Notes Maker — generate, edit, save (Supabase), export.
+import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { NotebookPen, Sparkles, Save, Trash2, Download, Plus, Edit3, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,26 +9,43 @@ import { Textarea } from "@/components/ui/textarea";
 import { callAI } from "@/lib/ai";
 import { toast } from "sonner";
 import { MarkdownView } from "@/components/MarkdownView";
-import { useNotes, newId } from "@/lib/store";
+import { useNotes, useNoteMutations } from "@/lib/store";
 import { motion } from "framer-motion";
 
 export default function Notes() {
-  const [notes, setNotes] = useNotes();
+  const { data: notes = [] } = useNotes();
+  const { create, update, remove } = useNoteMutations();
   const [topic, setTopic] = useState("");
   const [loading, setLoading] = useState(false);
   const [active, setActive] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
+  const [draft, setDraft] = useState<{ title: string; content: string } | null>(null);
 
   const current = notes.find((n) => n.id === active) || null;
+
+  // Hydrate draft when switching notes
+  useEffect(() => {
+    if (current) setDraft({ title: current.title, content: current.content });
+    else setDraft(null);
+  }, [current?.id]);
+
+  // Debounced auto-save
+  useEffect(() => {
+    if (!current || !draft) return;
+    if (draft.title === current.title && draft.content === current.content) return;
+    const t = setTimeout(() => {
+      update.mutate({ id: current.id, title: draft.title, content: draft.content });
+    }, 600);
+    return () => clearTimeout(t);
+  }, [draft, current?.id]);
 
   const generate = async () => {
     if (!topic.trim()) return;
     setLoading(true);
     try {
       const data = await callAI<{ content: string }>({ mode: "notes", prompt: topic });
-      const note = { id: newId(), title: topic, content: data.content || "", updatedAt: new Date().toISOString() };
-      setNotes([note, ...notes]);
-      setActive(note.id);
+      const created = await create.mutateAsync({ title: topic, content: data.content || "" });
+      setActive(created.id);
       setTopic("");
     } catch (e: any) {
       toast.error(e.message);
@@ -37,31 +54,22 @@ export default function Notes() {
     }
   };
 
-  const updateCurrent = (patch: Partial<{ title: string; content: string }>) => {
-    if (!current) return;
-    setNotes(notes.map((n) => (n.id === current.id ? { ...n, ...patch, updatedAt: new Date().toISOString() } : n)));
-  };
-
-  const remove = (id: string) => {
-    setNotes(notes.filter((n) => n.id !== id));
-    if (active === id) setActive(null);
-  };
-
   const exportNote = (kind: "md" | "txt") => {
     if (!current) return;
-    const blob = new Blob([current.content], { type: kind === "md" ? "text/markdown" : "text/plain" });
+    const blob = new Blob([draft?.content ?? current.content], {
+      type: kind === "md" ? "text/markdown" : "text/plain",
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${current.title.slice(0, 40)}.${kind}`;
+    a.download = `${(draft?.title ?? current.title).slice(0, 40)}.${kind}`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
-  const newBlank = () => {
-    const note = { id: newId(), title: "Untitled note", content: "# Untitled\n\nStart writing…", updatedAt: new Date().toISOString() };
-    setNotes([note, ...notes]);
-    setActive(note.id);
+  const newBlank = async () => {
+    const created = await create.mutateAsync({ title: "Untitled note", content: "# Untitled\n\nStart writing…" });
+    setActive(created.id);
     setEditMode(true);
   };
 
@@ -113,13 +121,14 @@ export default function Notes() {
                 >
                   <div className="min-w-0">
                     <div className="truncate text-sm font-medium">{n.title}</div>
-                    <div className="text-[10px] text-muted-foreground">{new Date(n.updatedAt).toLocaleDateString()}</div>
+                    <div className="text-[10px] text-muted-foreground">{new Date(n.updated_at).toLocaleDateString()}</div>
                   </div>
                   <Trash2
                     className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-60 hover:text-destructive hover:opacity-100"
                     onClick={(e) => {
                       e.stopPropagation();
-                      remove(n.id);
+                      remove.mutate(n.id);
+                      if (active === n.id) setActive(null);
                     }}
                   />
                 </motion.button>
@@ -130,7 +139,7 @@ export default function Notes() {
 
         <Card className="border-border/50 shadow-soft">
           <CardContent className="p-5">
-            {!current ? (
+            {!current || !draft ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <NotebookPen className="mb-3 h-10 w-10 text-muted-foreground/50" />
                 <p className="text-sm text-muted-foreground">Select a note or generate a new one.</p>
@@ -140,12 +149,12 @@ export default function Notes() {
                 <div className="flex flex-wrap items-center gap-2">
                   {editMode ? (
                     <Input
-                      value={current.title}
-                      onChange={(e) => updateCurrent({ title: e.target.value })}
+                      value={draft.title}
+                      onChange={(e) => setDraft({ ...draft, title: e.target.value })}
                       className="flex-1 rounded-xl text-base font-semibold"
                     />
                   ) : (
-                    <h2 className="flex-1 truncate text-lg font-semibold">{current.title}</h2>
+                    <h2 className="flex-1 truncate text-lg font-semibold">{draft.title}</h2>
                   )}
                   <Button variant="outline" size="sm" onClick={() => setEditMode((v) => !v)}>
                     {editMode ? <Eye className="mr-1.5 h-4 w-4" /> : <Edit3 className="mr-1.5 h-4 w-4" />}
@@ -160,18 +169,18 @@ export default function Notes() {
                 </div>
                 {editMode ? (
                   <Textarea
-                    value={current.content}
-                    onChange={(e) => updateCurrent({ content: e.target.value })}
+                    value={draft.content}
+                    onChange={(e) => setDraft({ ...draft, content: e.target.value })}
                     rows={20}
                     className="rounded-xl font-mono text-sm"
                   />
                 ) : (
                   <div className="min-h-[300px]">
-                    <MarkdownView content={current.content} />
+                    <MarkdownView content={draft.content} />
                   </div>
                 )}
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Save className="h-3 w-3" /> Auto-saved · {new Date(current.updatedAt).toLocaleTimeString()}
+                  <Save className="h-3 w-3" /> Auto-saved · {new Date(current.updated_at).toLocaleTimeString()}
                 </div>
               </div>
             )}

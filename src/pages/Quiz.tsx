@@ -1,4 +1,4 @@
-// AI Quiz Generator: generate from topic, take it, instant feedback, weakness detection.
+// AI Quiz Generator — Supabase-backed result history.
 import { useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { Brain, Sparkles, RotateCcw, Check, X } from "lucide-react";
@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { callAI } from "@/lib/ai";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import { useQuizResults, newId } from "@/lib/store";
+import { useAddQuizResult } from "@/lib/store";
 import { Progress } from "@/components/ui/progress";
 
 type QQ = {
@@ -26,7 +26,7 @@ export default function Quiz() {
   const [questions, setQuestions] = useState<QQ[]>([]);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [submitted, setSubmitted] = useState(false);
-  const [_, setResults] = useQuizResults();
+  const addResult = useAddQuizResult();
 
   const generate = async () => {
     if (!topic.trim()) return;
@@ -59,18 +59,10 @@ export default function Quiz() {
           .filter(Boolean) as string[]
       )
     );
-    setResults((prev) => [
-      {
-        id: newId(),
-        topic,
-        takenAt: new Date().toISOString(),
-        score: pct,
-        total: questions.length,
-        correct: score,
-        weakConcepts: weak,
-      },
-      ...prev,
-    ]);
+    addResult.mutate(
+      { topic, score: pct, total: questions.length, correct: score, weak_concepts: weak },
+      { onError: (e: any) => toast.error(e.message) }
+    );
   };
 
   const reset = () => {

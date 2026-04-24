@@ -6,8 +6,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AppLayout } from "@/components/AppLayout";
+import { AuthProvider } from "@/hooks/useAuth";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import NotFound from "./pages/NotFound.tsx";
 
+const Auth = lazy(() => import("./pages/Auth"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const ChatCoach = lazy(() => import("./pages/ChatCoach"));
 const Quiz = lazy(() => import("./pages/Quiz"));
@@ -20,10 +23,22 @@ const Notes = lazy(() => import("./pages/Notes"));
 const CalendarPage = lazy(() => import("./pages/CalendarPage"));
 const StudyTimer = lazy(() => import("./pages/StudyTimer"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { staleTime: 30_000, refetchOnWindowFocus: false, retry: 1 },
+  },
+});
 
 const Loader = () => (
   <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">Loading…</div>
+);
+
+const Protected = ({ children }: { children: React.ReactNode }) => (
+  <ProtectedRoute>
+    <AppLayout>
+      <Suspense fallback={<Loader />}>{children}</Suspense>
+    </AppLayout>
+  </ProtectedRoute>
 );
 
 const App = () => (
@@ -33,24 +48,25 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <AppLayout>
+          <AuthProvider>
             <Suspense fallback={<Loader />}>
               <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/chat" element={<ChatCoach />} />
-                <Route path="/quiz" element={<Quiz />} />
-                <Route path="/flashcards" element={<Flashcards />} />
-                <Route path="/mindmap" element={<MindMap />} />
-                <Route path="/voice" element={<Voice />} />
-                <Route path="/essay" element={<Essay />} />
-                <Route path="/translator" element={<Translator />} />
-                <Route path="/notes" element={<Notes />} />
-                <Route path="/calendar" element={<CalendarPage />} />
-                <Route path="/timer" element={<StudyTimer />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/" element={<Protected><Dashboard /></Protected>} />
+                <Route path="/chat" element={<Protected><ChatCoach /></Protected>} />
+                <Route path="/quiz" element={<Protected><Quiz /></Protected>} />
+                <Route path="/flashcards" element={<Protected><Flashcards /></Protected>} />
+                <Route path="/mindmap" element={<Protected><MindMap /></Protected>} />
+                <Route path="/voice" element={<Protected><Voice /></Protected>} />
+                <Route path="/essay" element={<Protected><Essay /></Protected>} />
+                <Route path="/translator" element={<Protected><Translator /></Protected>} />
+                <Route path="/notes" element={<Protected><Notes /></Protected>} />
+                <Route path="/calendar" element={<Protected><CalendarPage /></Protected>} />
+                <Route path="/timer" element={<Protected><StudyTimer /></Protected>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
-          </AppLayout>
+          </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
     </ThemeProvider>

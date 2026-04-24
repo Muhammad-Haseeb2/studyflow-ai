@@ -1,4 +1,4 @@
-// Smart Calendar — month view, add/edit/delete events, reminders w/ notification + sound.
+// Smart Calendar — Supabase-backed events with reminders.
 import { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { Calendar as CalIcon, Plus, ChevronLeft, ChevronRight, Trash2, Bell } from "lucide-react";
@@ -16,9 +16,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useCalendarEvents, newId, type CalendarEvent } from "@/lib/store";
+import { useCalendarEvents, useCalendarMutations, type CalendarEvent } from "@/lib/store";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+
+type Editable = {
+  id?: string;
+  title: string;
+  description: string;
+  starts_at: string;
+  ends_at: string;
+  category: CalendarEvent["category"];
+  reminder_minutes_before: number;
+};
 
 const CATS: Record<CalendarEvent["category"], string> = {
   study: "from-violet-500 to-purple-500",
@@ -58,10 +68,12 @@ function playBeep() {
 }
 
 export default function CalendarPage() {
-  const [events, setEvents] = useCalendarEvents();
+  const { data: events = [] } = useCalendarEvents();
+  const { upsert, remove } = useCalendarMutations();
   const [cursor, setCursor] = useState(new Date());
   const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<CalendarEvent | null>(null);
+  const [editing, setEditing] = useState<Editable | null>(null);
+  const [notified, setNotified] = useState<Set<string>>(new Set());
 
   // Notification permission
   useEffect(() => {
@@ -70,34 +82,32 @@ export default function CalendarPage() {
     }
   }, []);
 
-  // Reminder loop
+  // Reminder loop (in-memory notified tracking; resets per session)
   useEffect(() => {
     const tick = () => {
       const now = Date.now();
-      let updated = false;
-      const next = events.map((e) => {
-        if (e.notified) return e;
-        const start = new Date(e.startsAt).getTime();
-        const lead = (e.reminderMinutesBefore ?? 10) * 60 * 1000;
+      events.forEach((e) => {
+        if (notified.has(e.id)) return;
+        const start = new Date(e.starts_at).getTime();
+        const lead = (e.reminder_minutes_before ?? 10) * 60 * 1000;
         if (start - lead <= now && start > now - 60 * 1000) {
-          updated = true;
           if (typeof Notification !== "undefined" && Notification.permission === "granted") {
             try {
-              new Notification(`📚 ${e.title}`, { body: `Starts at ${new Date(e.startsAt).toLocaleTimeString()}` });
-            } catch { /* ignore */ }
+              new Notification(`📚 ${e.title}`, { body: `Starts at ${new Date(e.starts_at).toLocaleTimeString()}` });
+            } catch {
+              /* ignore */
+            }
           }
-          toast(`🔔 ${e.title}`, { description: `Starts at ${new Date(e.startsAt).toLocaleTimeString()}` });
+          toast(`🔔 ${e.title}`, { description: `Starts at ${new Date(e.starts_at).toLocaleTimeString()}` });
           playBeep();
-          return { ...e, notified: true };
+          setNotified((prev) => new Set(prev).add(e.id));
         }
-        return e;
       });
-      if (updated) setEvents(next);
     };
     tick();
     const id = setInterval(tick, 30000);
     return () => clearInterval(id);
-  }, [events, setEvents]);
+  }, [events, notified]);
 
   const days = useMemo(() => {
     const start = startOfMonth(cursor);
@@ -125,7 +135,7 @@ export default function CalendarPage() {
   const eventsByDay = useMemo(() => {
     const m = new Map<string, CalendarEvent[]>();
     events.forEach((e) => {
-      const k = fmt(new Date(e.startsAt));
+      const k = fmt(new Date(e.starts_at));
       m.set(k, [...(m.get(k) || []), e]);
     });
     return m;
@@ -138,24 +148,46 @@ export default function CalendarPage() {
     const end = new Date(start);
     end.setHours(start.getHours() + 1);
     setEditing({
-      id: newId(),
       title: "",
       description: "",
-      startsAt: start.toISOString(),
-      endsAt: end.toISOString(),
+      starts_at: start.toISOString(),
+      ends_at: end.toISOString(),
       category: "study",
-      reminderMinutesBefore: 10,
+      reminder_minutes_before: 10,
+    });
+    setOpen(true);
+  };
+
+  const openEdit = (e: CalendarEvent) => {
+    setEditing({
+      id: e.id,
+      title: e.title,
+      description: e.description || "",
+      starts_at: e.starts_at,
+      ends_at: e.ends_at,
+      category: e.category,
+      reminder_minutes_before: e.reminder_minutes_before ?? 10,
     });
     setOpen(true);
   };
 
   const save = () => {
     if (!editing || !editing.title.trim()) return;
-    const exists = events.find((e) => e.id === editing.id);
-    if (exists) setEvents(events.map((e) => (e.id === editing.id ? { ...editing, notified: false } : e)));
-    else setEvents([...events, editing]);
-    setOpen(false);
-    setEditing(null);
+    upsert.mutate(
+      { ...editing, reminder_enabled: true },
+      {
+        onSuccess: () => {
+          if (editing.id) setNotified((prev) => {
+            const next = new Set(prev);
+            next.delete(editing.id!);
+            return next;
+          });
+          setOpen(false);
+          setEditing(null);
+        },
+        onError: (e: any) => toast.error(e.message),
+      }
+    );
   };
 
   return (
@@ -228,8 +260,7 @@ export default function CalendarPage() {
                         key={e.id}
                         onClick={(ev) => {
                           ev.stopPropagation();
-                          setEditing(e);
-                          setOpen(true);
+                          openEdit(e);
                         }}
                         className={`truncate rounded-md bg-gradient-to-r ${CATS[e.category]} px-1.5 py-0.5 text-[10px] font-medium text-white`}
                       >
@@ -248,7 +279,7 @@ export default function CalendarPage() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editing && events.find((e) => e.id === editing.id) ? "Edit event" : "New event"}</DialogTitle>
+            <DialogTitle>{editing?.id ? "Edit event" : "New event"}</DialogTitle>
             <DialogDescription>Schedule your study session, exam or revision.</DialogDescription>
           </DialogHeader>
           {editing && (
@@ -261,7 +292,7 @@ export default function CalendarPage() {
                 <Label>Description</Label>
                 <Textarea
                   rows={2}
-                  value={editing.description || ""}
+                  value={editing.description}
                   onChange={(e) => setEditing({ ...editing, description: e.target.value })}
                 />
               </div>
@@ -270,16 +301,16 @@ export default function CalendarPage() {
                   <Label>Starts</Label>
                   <Input
                     type="datetime-local"
-                    value={editing.startsAt.slice(0, 16)}
-                    onChange={(e) => setEditing({ ...editing, startsAt: new Date(e.target.value).toISOString() })}
+                    value={editing.starts_at.slice(0, 16)}
+                    onChange={(e) => setEditing({ ...editing, starts_at: new Date(e.target.value).toISOString() })}
                   />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Ends</Label>
                   <Input
                     type="datetime-local"
-                    value={editing.endsAt.slice(0, 16)}
-                    onChange={(e) => setEditing({ ...editing, endsAt: new Date(e.target.value).toISOString() })}
+                    value={editing.ends_at.slice(0, 16)}
+                    onChange={(e) => setEditing({ ...editing, ends_at: new Date(e.target.value).toISOString() })}
                   />
                 </div>
               </div>
@@ -288,7 +319,7 @@ export default function CalendarPage() {
                   <Label>Category</Label>
                   <Select
                     value={editing.category}
-                    onValueChange={(v: any) => setEditing({ ...editing, category: v })}
+                    onValueChange={(v: CalendarEvent["category"]) => setEditing({ ...editing, category: v })}
                   >
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -305,21 +336,25 @@ export default function CalendarPage() {
                   <Input
                     type="number"
                     min={0}
-                    value={editing.reminderMinutesBefore ?? 10}
-                    onChange={(e) => setEditing({ ...editing, reminderMinutesBefore: Number(e.target.value) || 0 })}
+                    value={editing.reminder_minutes_before}
+                    onChange={(e) => setEditing({ ...editing, reminder_minutes_before: Number(e.target.value) || 0 })}
                   />
                 </div>
               </div>
             </div>
           )}
           <DialogFooter className="flex-row sm:justify-between">
-            {editing && events.find((e) => e.id === editing.id) ? (
+            {editing?.id ? (
               <Button
                 variant="outline"
                 className="text-destructive hover:bg-destructive/10"
                 onClick={() => {
-                  setEvents(events.filter((e) => e.id !== editing.id));
-                  setOpen(false);
+                  remove.mutate(editing.id!, {
+                    onSuccess: () => {
+                      setOpen(false);
+                      setEditing(null);
+                    },
+                  });
                 }}
               >
                 <Trash2 className="mr-2 h-4 w-4" /> Delete
@@ -331,7 +366,7 @@ export default function CalendarPage() {
               <Button variant="outline" onClick={() => setOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={save} className="gradient-primary text-primary-foreground">
+              <Button onClick={save} className="gradient-primary text-primary-foreground" disabled={upsert.isPending}>
                 Save
               </Button>
             </div>
