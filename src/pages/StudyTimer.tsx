@@ -1,11 +1,11 @@
-// Study Timer — normal & Pomodoro, contributes to dashboard sessions.
+// Study Timer — Supabase-backed sessions, normal & Pomodoro.
 import { useEffect, useRef, useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { Timer as TimerIcon, Play, Pause, RotateCcw, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { motion } from "framer-motion";
-import { useStudySessions, newId } from "@/lib/store";
+import { useStudySessions, useAddStudySession } from "@/lib/store";
 import { toast } from "sonner";
 
 type Mode = "normal" | "pomodoro";
@@ -33,15 +33,18 @@ function beep() {
     g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
     o.start();
     o.stop(ctx.currentTime + 0.5);
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 export default function StudyTimer() {
   const [mode, setMode] = useState<Mode>("pomodoro");
   const [phase, setPhase] = useState<Phase>("focus");
   const [running, setRunning] = useState(false);
-  const [elapsed, setElapsed] = useState(0); // seconds in normal; phase elapsed in pomo
-  const [sessions, setSessions] = useStudySessions();
+  const [elapsed, setElapsed] = useState(0);
+  const { data: sessions = [] } = useStudySessions();
+  const addSession = useAddStudySession();
   const startedAtRef = useRef<number | null>(null);
   const phaseStartRef = useRef<number | null>(null);
 
@@ -60,13 +63,14 @@ export default function StudyTimer() {
     if (elapsed >= target) {
       beep();
       if (phase === "focus") {
-        // Save focus session
         const dur = elapsed;
         if (dur >= 60) {
-          setSessions((prev) => [
-            { id: newId(), startedAt: new Date(Date.now() - dur * 1000).toISOString(), durationSec: dur, mode: "pomodoro", label: "Focus" },
-            ...prev,
-          ]);
+          addSession.mutate({
+            started_at: new Date(Date.now() - dur * 1000).toISOString(),
+            duration_sec: dur,
+            mode: "pomodoro",
+            label: "Focus",
+          });
         }
         toast.success("Focus done — take a break ☕");
         setPhase("break");
@@ -77,7 +81,7 @@ export default function StudyTimer() {
       setElapsed(0);
       phaseStartRef.current = Date.now();
     }
-  }, [elapsed, mode, phase, running, target, setSessions]);
+  }, [elapsed, mode, phase, running, target]);
 
   const start = () => {
     if (!startedAtRef.current) startedAtRef.current = Date.now();
@@ -98,10 +102,12 @@ export default function StudyTimer() {
   const stop = () => {
     setRunning(false);
     if (mode === "normal" && elapsed >= 60) {
-      setSessions((prev) => [
-        { id: newId(), startedAt: new Date(Date.now() - elapsed * 1000).toISOString(), durationSec: elapsed, mode: "normal" },
-        ...prev,
-      ]);
+      addSession.mutate({
+        started_at: new Date(Date.now() - elapsed * 1000).toISOString(),
+        duration_sec: elapsed,
+        mode: "normal",
+        label: null,
+      });
       toast.success(`Saved session: ${fmt(elapsed)}`);
     }
     reset();
@@ -211,9 +217,9 @@ export default function StudyTimer() {
                     <span className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                       {s.mode}
                     </span>
-                    <span className="text-muted-foreground">{new Date(s.startedAt).toLocaleString()}</span>
+                    <span className="text-muted-foreground">{new Date(s.started_at).toLocaleString()}</span>
                   </div>
-                  <span className="font-mono font-medium">{fmt(s.durationSec)}</span>
+                  <span className="font-mono font-medium">{fmt(s.duration_sec)}</span>
                 </div>
               ))}
             </div>
