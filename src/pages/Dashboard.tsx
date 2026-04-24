@@ -1,4 +1,4 @@
-// Dashboard: stats, weekly graph, achievements, goals.
+// Dashboard: stats, weekly graph, achievements, goals (Supabase-backed).
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/PageHeader";
 import {
@@ -6,9 +6,9 @@ import {
   computeStreak,
   totalMinutesToday,
   useGoals,
+  useGoalMutations,
   useStudySessions,
   weeklyData,
-  newId,
   type Goal,
 } from "@/lib/store";
 import { LayoutDashboard, Flame, Clock, Target, Award, Plus, Trash2 } from "lucide-react";
@@ -31,11 +31,13 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 
 export default function Dashboard() {
-  const [sessions] = useStudySessions();
-  const [goals, setGoals] = useGoals();
+  const { data: sessions = [] } = useStudySessions();
+  const { data: goals = [] } = useGoals();
+  const goalMut = useGoalMutations();
+
   const minutesToday = totalMinutesToday(sessions);
   const streak = computeStreak(sessions);
-  const totalMinutes = Math.round(sessions.reduce((a, s) => a + s.durationSec, 0) / 60);
+  const totalMinutes = Math.round(sessions.reduce((a, s) => a + s.duration_sec, 0) / 60);
   const data = weeklyData(sessions);
   const achievements = computeAchievements(sessions);
 
@@ -145,18 +147,22 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      <GoalsSection goals={goals} setGoals={setGoals} minutesToday={minutesToday} />
+      <GoalsSection goals={goals} create={goalMut.create.mutate} update={goalMut.update.mutate} remove={goalMut.remove.mutate} minutesToday={minutesToday} />
     </div>
   );
 }
 
 function GoalsSection({
   goals,
-  setGoals,
+  create,
+  update,
+  remove,
   minutesToday,
 }: {
   goals: Goal[];
-  setGoals: (g: Goal[]) => void;
+  create: (g: { title: string; target_minutes_per_day: number }) => void;
+  update: (g: { id: string; status?: Goal["status"] }) => void;
+  remove: (id: string) => void;
   minutesToday: number;
 }) {
   const [open, setOpen] = useState(false);
@@ -165,16 +171,7 @@ function GoalsSection({
 
   const add = () => {
     if (!title.trim()) return;
-    setGoals([
-      ...goals,
-      {
-        id: newId(),
-        title: title.trim(),
-        targetMinutesPerDay: target,
-        active: true,
-        createdAt: new Date().toISOString(),
-      },
-    ]);
+    create({ title: title.trim(), target_minutes_per_day: target });
     setTitle("");
     setTarget(60);
     setOpen(false);
@@ -225,32 +222,33 @@ function GoalsSection({
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">
             {goals.map((g) => {
-              const pct = Math.min(100, Math.round((minutesToday / g.targetMinutesPerDay) * 100));
+              const pct = Math.min(100, Math.round((minutesToday / g.target_minutes_per_day) * 100));
+              const isActive = g.status === "active";
               return (
                 <motion.div
                   key={g.id}
                   layout
                   initial={{ opacity: 0, scale: 0.97 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className={`group rounded-xl border border-border/50 bg-card p-4 transition-all ${g.active ? "" : "opacity-60"}`}
+                  className={`group rounded-xl border border-border/50 bg-card p-4 transition-all ${isActive ? "" : "opacity-60"}`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <div className="truncate font-medium">{g.title}</div>
                       <div className="text-xs text-muted-foreground">
-                        {minutesToday}/{g.targetMinutesPerDay} min today
+                        {minutesToday}/{g.target_minutes_per_day} min today
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
                       <Switch
-                        checked={g.active}
-                        onCheckedChange={(v) => setGoals(goals.map((x) => (x.id === g.id ? { ...x, active: v } : x)))}
+                        checked={isActive}
+                        onCheckedChange={(v) => update({ id: g.id, status: v ? "active" : "inactive" })}
                       />
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        onClick={() => setGoals(goals.filter((x) => x.id !== g.id))}
+                        onClick={() => remove(g.id)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
