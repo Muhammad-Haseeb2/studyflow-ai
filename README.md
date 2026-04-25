@@ -27,7 +27,6 @@
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?style=for-the-badge&logo=postgresql&logoColor=white)](https://postgresql.org)
 [![Redis](https://img.shields.io/badge/Redis-7.2-DC382D?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io)
-[![Docker](https://img.shields.io/badge/Docker-ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://docker.com)
 
 <br/>
 
@@ -42,7 +41,7 @@
 
 <br/>
 
-[🚀 Live Demo](#) · [📖 Documentation](#documentation) · [🐛 Report Bug](issues) · [✨ Request Feature](issues) · [💬 Discord](#)
+[🚀 Live Demo](#) · [📖 Documentation](#documentation) · [🐛 Report Bug](issues) · [✨ Request Feature](issues)
 
 <br/>
 
@@ -637,7 +636,6 @@ If this project helped you, please consider giving it a ⭐ — it means the wor
 
 <br/>
 
-[![GitHub stars](https://img.shields.io/github/stars/Muhammad-Haseeb2/studyflow_ai?style=social)](https://github.com/Muhammad-Haseeb2/studyflow_ai)
 [![Linkedin connect](https://img.shields.io/linkedin/follow/muhammad-haseeb-hsb?style=social)](www.linkedin.com/in/muhammad-haseeb-hsb)
 
 <br/>
@@ -648,6 +646,6 @@ If this project helped you, please consider giving it a ⭐ — it means the wor
 
 ---
 
-Made with ❤️ and ☕ · [yourusername](https://github.com/Muhammad-Haseeb2) · 2025
+Made with ❤️ and ☕ · [Muhammad-Haseeb2](https://github.com/Muhammad-Haseeb2) · 2026
 
 </div>
