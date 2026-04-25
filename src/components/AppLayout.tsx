@@ -80,7 +80,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </div>
       </div>
       <div className="mt-2 flex flex-col gap-0.5">
-        {NAV.map((item) => (
+        {nav.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
