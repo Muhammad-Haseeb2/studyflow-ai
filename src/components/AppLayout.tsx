@@ -56,6 +56,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const { resolved, setTheme } = useTheme();
   const location = useLocation();
   const { user, signOut } = useAuth();
+  const { isAdmin } = useIsAdmin();
+  const nav = isAdmin
+    ? [...NAV, { to: "/admin", label: "Admin", icon: Shield, color: "from-red-500 to-orange-500" }]
+    : NAV;
   const initials = (user?.user_metadata?.display_name || user?.email || "U")
     .toString()
     .split(/[\s@]/)
