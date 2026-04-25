@@ -1,5 +1,5 @@
 // AI Assignment Maker — multi-step flow: input → options → generate → preview → download.
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FileText,
@@ -33,8 +33,6 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { extractTextFromFile } from "@/lib/fileExtract";
 import {
-  downloadDocx,
-  downloadPdf,
   generateDocx,
   generatePdf,
   type AssignmentContent,
