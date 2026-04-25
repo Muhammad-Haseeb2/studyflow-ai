@@ -20,6 +20,7 @@ import {
   Menu,
   X,
   Shield,
+  GraduationCap,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,7 @@ const NAV = [
   { to: "/mindmap", label: "Mind Map", icon: Network, color: "from-emerald-500 to-teal-500" },
   { to: "/voice", label: "Voice Mode", icon: Mic, color: "from-sky-500 to-cyan-500" },
   { to: "/essay", label: "Essay Writer", icon: PenLine, color: "from-blue-500 to-indigo-500" },
+  { to: "/assignment", label: "Assignment Maker", icon: GraduationCap, color: "from-violet-500 to-purple-600" },
   { to: "/translator", label: "Translator", icon: Languages, color: "from-teal-500 to-emerald-500" },
   { to: "/notes", label: "Notes", icon: NotebookPen, color: "from-purple-500 to-pink-500" },
   { to: "/calendar", label: "Calendar", icon: Calendar, color: "from-orange-500 to-red-500" },

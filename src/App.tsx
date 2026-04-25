@@ -24,6 +24,7 @@ const Notes = lazy(() => import("./pages/Notes"));
 const CalendarPage = lazy(() => import("./pages/CalendarPage"));
 const StudyTimer = lazy(() => import("./pages/StudyTimer"));
 const Admin = lazy(() => import("./pages/Admin"));
+const AssignmentMaker = lazy(() => import("./pages/AssignmentMaker"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -65,6 +66,7 @@ const App = () => (
                 <Route path="/notes" element={<Protected><Notes /></Protected>} />
                 <Route path="/calendar" element={<Protected><CalendarPage /></Protected>} />
                 <Route path="/timer" element={<Protected><StudyTimer /></Protected>} />
+                <Route path="/assignment" element={<Protected><AssignmentMaker /></Protected>} />
                 <Route
                   path="/admin"
                   element={
