@@ -179,13 +179,13 @@ postgresql >= 15
 ### 🐳 One-Command Setup (Docker)
 
 ```bash
-git clone https://github.com/yourusername/ai-study-helper.git
+git clone https://github.com/Muhammad-Haseeb2/studyflow-ai.git
 cd ai-study-helper
 cp .env.example .env          # Add your API keys
 docker-compose up --build     # Spins up everything
 ```
 
-**That's it.** Open [http://localhost:3000](http://localhost:3000) 🎉
+**That's it.** Open https://studyflow-ai-tqrf.vercel.app/ 🎉
 
 ---
 
