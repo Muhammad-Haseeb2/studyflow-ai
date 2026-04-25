@@ -65,6 +65,18 @@ const App = () => (
                 <Route path="/notes" element={<Protected><Notes /></Protected>} />
                 <Route path="/calendar" element={<Protected><CalendarPage /></Protected>} />
                 <Route path="/timer" element={<Protected><StudyTimer /></Protected>} />
+                <Route
+                  path="/admin"
+                  element={
+                    <AdminRoute>
+                      <AppLayout>
+                        <Suspense fallback={<Loader />}>
+                          <Admin />
+                        </Suspense>
+                      </AppLayout>
+                    </AdminRoute>
+                  }
+                />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
