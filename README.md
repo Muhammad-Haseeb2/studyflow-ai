@@ -156,7 +156,6 @@ An AI tutor that **knows you** — your learning pace, your weak areas, your goa
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-> 📐 See the [full system architecture diagram](docs/architecture.pdf) for the complete async pipeline, voice flow, and microservice interaction maps.
 
 <br/>
 
@@ -536,8 +535,6 @@ Contributions are what make the open source community amazing. Any contribution 
 3. Commit your changes (`git commit -m 'feat: add AmazingFeature'`)
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
-
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) for our code of conduct and development guidelines.
 
 <br/>
 
