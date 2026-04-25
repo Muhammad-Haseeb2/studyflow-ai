@@ -239,7 +239,8 @@ export default function AssignmentMaker() {
       console.warn("upload failed", error);
       return;
     }
-    await supabase.from("assignments").update({ [column]: path }).eq("id", savedId);
+    const update = column === "docx_path" ? { docx_path: path } : { pdf_path: path };
+    await supabase.from("assignments").update(update).eq("id", savedId);
     qc.invalidateQueries({ queryKey: ["assignments", user.id] });
   };
 
