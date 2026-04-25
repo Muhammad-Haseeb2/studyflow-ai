@@ -57,7 +57,7 @@
 
 | AI Chat Coach | Quiz Generator | Mind Map | Dashboard |
 |:---:|:---:|:---:|:---:|
-| ![Chat](.github/assets/chat.png) | ![Quiz](.github/assets/quiz.png) | ![Mindmap](.github/assets/mindmap.png) | ![Dashboard](.github/assets/dashboard.png) |
+| ![Chat](.github/chat.png) | ![Quiz](.github/quiz.png) | ![Mindmap](.github/mindmap.png) | ![Dashboard](.github/dashboard.png) |
 | *Multi-mode AI explanations* | *Adaptive difficulty + weak area detection* | *D3.js hierarchical maps* | *Streak tracking & analytics* |
 
 </div>
