@@ -152,7 +152,7 @@ An AI tutor that **knows you** — your learning pace, your weak areas, your goa
            │
 ┌──────────▼──────────────────────────────────────────────────────────┐
 │                        STORAGE LAYER                                │
-│  PostgreSQL (RDS) │ MongoDB │ Redis (ElastiCache) │ Vector DB │ S3  │
+│   PostgreSQL (RDS) │ MongoDB │ Redis (ElastiCache) │ Vector DB      │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -170,19 +170,10 @@ An AI tutor that **knows you** — your learning pace, your weak areas, your goa
 # Required
 node >= 18.0.0
 python >= 3.11
-docker & docker-compose
 redis-server
 postgresql >= 15
 ```
 
-### 🐳 One-Command Setup (Docker)
-
-```bash
-git clone https://github.com/Muhammad-Haseeb2/studyflow-ai.git
-cd ai-study-helper
-cp .env.example .env          # Add your API keys
-docker-compose up --build     # Spins up everything
-```
 
 **That's it.** Open https://studyflow-ai-tqrf.vercel.app/ 🎉
 
@@ -243,7 +234,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-App available at: `http://localhost:3000`
+App available at: `https://studyflow-ai-tqrf.vercel.app/`
 
 </details>
 
@@ -365,7 +356,7 @@ ai-study-helper/
 ├── 📂 infrastructure/
 │   ├── docker-compose.yml     # Local development stack
 │   ├── docker-compose.prod.yml
-│   ├── k8s/                   # Kubernetes manifests
+│   ├── k8s/                   
 │   │   ├── api-deployment.yaml
 │   │   ├── worker-deployment.yaml
 │   │   └── ingress.yaml
@@ -385,7 +376,6 @@ ai-study-helper/
 
 ## 🔌 API Reference
 
-Base URL: `https://api.yourdomain.com/api/v1`
 
 All endpoints require `Authorization: Bearer <token>` unless marked `[public]`.
 
@@ -463,57 +453,6 @@ Connect to `wss://api.yourdomain.com/ws/study` with JWT in the query string.
 
 <br/>
 
----
-
-## 🚀 Deployment
-
-### Production (Kubernetes + AWS)
-
-```bash
-# 1. Build and push Docker images
-docker build -t your-registry/study-helper-api:latest ./backend
-docker build -t your-registry/study-helper-worker:latest ./backend
-docker push your-registry/study-helper-api:latest
-
-# 2. Apply Kubernetes manifests
-kubectl apply -f infrastructure/k8s/
-
-# 3. Set secrets
-kubectl create secret generic app-secrets \
-  --from-env-file=.env.production
-
-# 4. Deploy
-kubectl rollout status deployment/api-deployment
-```
-
-### Infrastructure Stack
-
-| Component | Service | Notes |
-|-----------|---------|-------|
-| Frontend | Vercel / Cloudflare Pages | Auto CDN, PR previews |
-| API | AWS EKS (2–10 pods, HPA) | Scales on CPU > 70% |
-| Workers | EKS worker pool | Scales on Redis queue depth |
-| Database | AWS RDS PostgreSQL (Multi-AZ) | + 2 read replicas |
-| Cache | AWS ElastiCache Redis | Cluster mode |
-| Storage | AWS S3 / Cloudflare R2 | Audio, docs, exports |
-| CDN | Cloudflare | Static assets, caching |
-| Monitoring | Datadog + Grafana | Metrics, traces, alerts |
-
-### CI/CD Pipeline
-
-```
-Push to main
-    │
-    ├─ pytest (backend tests)
-    ├─ vitest (frontend tests)
-    ├─ ruff lint + mypy type check
-    │
-    ├─ Build Docker images → push to ECR
-    ├─ Deploy to staging → smoke tests
-    └─ Rolling deploy to production (zero downtime)
-```
-
-<br/>
 
 ---
 
