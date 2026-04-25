@@ -636,7 +636,7 @@ If this project helped you, please consider giving it a ⭐ — it means the wor
 
 <br/>
 
-[![Linkedin connect](https://img.shields.io/linkedin/follow/muhammad-haseeb-hsb?style=social)](www.linkedin.com/in/muhammad-haseeb-hsb)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-blue?logo=linkedin)](https://www.linkedin.com/in/muhammad-haseeb-hsb)
 
 <br/>
 
