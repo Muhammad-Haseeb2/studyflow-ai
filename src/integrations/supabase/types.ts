@@ -44,6 +44,69 @@ export type Database = {
         }
         Relationships: []
       }
+      assignments: {
+        Row: {
+          content: Json
+          created_at: string
+          docx_path: string | null
+          formatting_style: string
+          id: string
+          include_references: boolean
+          include_title_page: boolean
+          language: string
+          level: string
+          pdf_path: string | null
+          references_list: Json
+          source_filename: string | null
+          source_input: string | null
+          title: string
+          topic: string | null
+          updated_at: string
+          user_id: string
+          word_count: number
+        }
+        Insert: {
+          content?: Json
+          created_at?: string
+          docx_path?: string | null
+          formatting_style?: string
+          id?: string
+          include_references?: boolean
+          include_title_page?: boolean
+          language?: string
+          level?: string
+          pdf_path?: string | null
+          references_list?: Json
+          source_filename?: string | null
+          source_input?: string | null
+          title?: string
+          topic?: string | null
+          updated_at?: string
+          user_id: string
+          word_count?: number
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          docx_path?: string | null
+          formatting_style?: string
+          id?: string
+          include_references?: boolean
+          include_title_page?: boolean
+          language?: string
+          level?: string
+          pdf_path?: string | null
+          references_list?: Json
+          source_filename?: string | null
+          source_input?: string | null
+          title?: string
+          topic?: string | null
+          updated_at?: string
+          user_id?: string
+          word_count?: number
+        }
+        Relationships: []
+      }
       calendar_events: {
         Row: {
           category: string
