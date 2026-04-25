@@ -20,9 +20,7 @@ export async function extractTextFromFile(file: File): Promise<string> {
 async function extractPdfText(file: File): Promise<string> {
   // Lazy-load pdfjs to keep main bundle small
   const pdfjs: any = await import("pdfjs-dist");
-  // Use bundled worker (avoids CDN/CORS issues)
-  // @ts-expect-error - worker import
-  const worker = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url")).default;
+  const worker = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url" as string)).default;
   pdfjs.GlobalWorkerOptions.workerSrc = worker;
 
   const buf = await file.arrayBuffer();

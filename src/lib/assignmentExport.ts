@@ -49,10 +49,9 @@ export async function generateDocx(content: AssignmentContent, opts: ExportOptio
   const font = fontFor(opts);
   const baseSize = opts.handwritten ? 32 : 24; // half-points
 
-  const para = (text: string, extra: Partial<ConstructorParameters<typeof Paragraph>[0]> = {}) =>
+  const para = (text: string) =>
     new Paragraph({
       spacing: { line: opts.handwritten ? 480 : 360, after: 200 },
-      ...extra,
       children: [new TextRun({ text, font, size: baseSize })],
     });
 
