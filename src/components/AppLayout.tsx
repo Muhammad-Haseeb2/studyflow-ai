@@ -19,6 +19,7 @@ import {
   Sparkles,
   Menu,
   X,
+  Shield,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { LogOut, User as UserIcon } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -54,6 +56,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const { resolved, setTheme } = useTheme();
   const location = useLocation();
   const { user, signOut } = useAuth();
+  const { isAdmin } = useIsAdmin();
+  const nav = isAdmin
+    ? [...NAV, { to: "/admin", label: "Admin", icon: Shield, color: "from-red-500 to-orange-500" }]
+    : NAV;
   const initials = (user?.user_metadata?.display_name || user?.email || "U")
     .toString()
     .split(/[\s@]/)
@@ -74,7 +80,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </div>
       </div>
       <div className="mt-2 flex flex-col gap-0.5">
-        {NAV.map((item) => (
+        {nav.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
@@ -163,7 +169,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
             </Button>
             <div className="flex flex-1 items-center gap-2">
               <h1 className="text-sm font-semibold text-muted-foreground">
-                {NAV.find((n) => (n.to === "/" ? location.pathname === "/" : location.pathname.startsWith(n.to)))?.label || "Studyflow"}
+                {nav.find((n) => (n.to === "/" ? location.pathname === "/" : location.pathname.startsWith(n.to)))?.label || "Studyflow"}
               </h1>
             </div>
             <Button

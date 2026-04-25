@@ -8,6 +8,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { AppLayout } from "@/components/AppLayout";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { AdminRoute } from "@/components/AdminRoute";
 import NotFound from "./pages/NotFound.tsx";
 
 const Auth = lazy(() => import("./pages/Auth"));
@@ -22,6 +23,7 @@ const Translator = lazy(() => import("./pages/Translator"));
 const Notes = lazy(() => import("./pages/Notes"));
 const CalendarPage = lazy(() => import("./pages/CalendarPage"));
 const StudyTimer = lazy(() => import("./pages/StudyTimer"));
+const Admin = lazy(() => import("./pages/Admin"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -63,6 +65,18 @@ const App = () => (
                 <Route path="/notes" element={<Protected><Notes /></Protected>} />
                 <Route path="/calendar" element={<Protected><CalendarPage /></Protected>} />
                 <Route path="/timer" element={<Protected><StudyTimer /></Protected>} />
+                <Route
+                  path="/admin"
+                  element={
+                    <AdminRoute>
+                      <AppLayout>
+                        <Suspense fallback={<Loader />}>
+                          <Admin />
+                        </Suspense>
+                      </AppLayout>
+                    </AdminRoute>
+                  }
+                />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
