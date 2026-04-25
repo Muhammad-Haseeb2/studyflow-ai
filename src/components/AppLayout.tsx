@@ -169,7 +169,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
             </Button>
             <div className="flex flex-1 items-center gap-2">
               <h1 className="text-sm font-semibold text-muted-foreground">
-                {NAV.find((n) => (n.to === "/" ? location.pathname === "/" : location.pathname.startsWith(n.to)))?.label || "Studyflow"}
+                {nav.find((n) => (n.to === "/" ? location.pathname === "/" : location.pathname.startsWith(n.to)))?.label || "Studyflow"}
               </h1>
             </div>
             <Button
