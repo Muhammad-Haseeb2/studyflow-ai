@@ -23,6 +23,7 @@ const Translator = lazy(() => import("./pages/Translator"));
 const Notes = lazy(() => import("./pages/Notes"));
 const CalendarPage = lazy(() => import("./pages/CalendarPage"));
 const StudyTimer = lazy(() => import("./pages/StudyTimer"));
+const Admin = lazy(() => import("./pages/Admin"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
