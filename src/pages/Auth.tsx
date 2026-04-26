@@ -31,6 +31,8 @@ export default function Auth() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
 
   useEffect(() => {
     if (!loading && session) navigate(from, { replace: true });
@@ -82,13 +84,35 @@ export default function Auth() {
 
   const handleGoogle = async () => {
     setBusy(true);
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
-    if (result.error) {
+    try {
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin,
+      });
+      if (result.error) {
+        setBusy(false);
+        toast.error(result.error.message || "Google sign-in failed");
+        return;
+      }
+      // result.redirected → browser is navigating away, keep busy state
+    } catch (err: any) {
       setBusy(false);
-      toast.error("Google sign-in failed");
+      toast.error(err?.message || "Google sign-in failed");
     }
+  };
+
+  const handleForgot = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const ev = emailSchema.safeParse(forgotEmail);
+    if (!ev.success) return toast.error(ev.error.issues[0].message);
+    setBusy(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(ev.data, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setBusy(false);
+    if (error) return toast.error(error.message);
+    toast.success("Check your inbox for the reset link.");
+    setForgotOpen(false);
+    setForgotEmail("");
   };
 
   return (
@@ -115,7 +139,16 @@ export default function Auth() {
                 <Input id="si-email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
               </div>
               <div>
-                <Label htmlFor="si-pass">Password</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="si-pass">Password</Label>
+                  <button
+                    type="button"
+                    onClick={() => { setForgotEmail(email); setForgotOpen(true); }}
+                    className="text-xs font-medium text-primary hover:underline"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
                 <Input id="si-pass" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
               </div>
               <Button type="submit" className="w-full gradient-primary" disabled={busy}>
