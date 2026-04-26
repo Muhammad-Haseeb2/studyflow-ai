@@ -41,7 +41,6 @@
 
 <br/>
 
-[🚀 Live Demo](#) · [📖 Documentation](#documentation) · [🐛 Report Bug](issues) · [✨ Request Feature](issues)
 
 <br/>
 
