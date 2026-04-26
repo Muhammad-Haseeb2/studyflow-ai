@@ -190,6 +190,42 @@ export default function Auth() {
           Continue with Google
         </Button>
       </Card>
+
+      {/* Forgot password dialog */}
+      {forgotOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+          onClick={() => setForgotOpen(false)}
+        >
+          <Card className="w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
+            <h2 className="mb-1 text-lg font-bold">Reset your password</h2>
+            <p className="mb-4 text-sm text-muted-foreground">
+              We'll email you a secure link to set a new password.
+            </p>
+            <form onSubmit={handleForgot} className="space-y-3">
+              <div>
+                <Label htmlFor="fp-email">Email</Label>
+                <Input
+                  id="fp-email"
+                  type="email"
+                  autoComplete="email"
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="flex gap-2 pt-1">
+                <Button type="button" variant="outline" className="flex-1" onClick={() => setForgotOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" className="flex-1 gradient-primary" disabled={busy}>
+                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send link"}
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
