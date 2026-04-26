@@ -164,58 +164,47 @@ export default function Quiz() {
                           {i + 1}
                         </div>
                         <div className="flex-1">
-                          <div className="text-xs uppercase tracking-wider text-muted-foreground">{q.type === "mcq" ? "Multiple choice" : "Conceptual"}</div>
+                          <div className="text-xs uppercase tracking-wider text-muted-foreground">Multiple choice</div>
                           <div className="mt-0.5 font-medium">{q.question}</div>
                         </div>
                       </div>
 
-                      {q.type === "mcq" && q.options ? (
-                        <div className="grid gap-2">
-                          {q.options.map((opt) => {
-                            const selected = ua === opt;
-                            const isCorrect = submitted && opt.trim().toLowerCase() === q.answer.trim().toLowerCase();
-                            const isWrong = submitted && selected && !correct;
-                            return (
-                              <button
-                                key={opt}
-                                disabled={submitted}
-                                onClick={() => setAnswers({ ...answers, [i]: opt })}
-                                className={`flex items-center gap-2 rounded-xl border p-3 text-left text-sm transition-all ${
-                                  isCorrect
-                                    ? "border-success bg-success/10 text-foreground"
-                                    : isWrong
-                                    ? "border-destructive bg-destructive/10 text-foreground"
-                                    : selected
-                                    ? "border-primary bg-primary/10"
-                                    : "border-border/60 hover:border-primary/50 hover:bg-primary/5"
-                                }`}
-                              >
-                                {submitted ? (
-                                  isCorrect ? (
-                                    <Check className="h-4 w-4 text-success" />
-                                  ) : isWrong ? (
-                                    <X className="h-4 w-4 text-destructive" />
-                                  ) : (
-                                    <span className="h-4 w-4" />
-                                  )
+                      <div className="grid gap-2">
+                        {q.options.map((opt) => {
+                          const selected = ua === opt;
+                          const isCorrect = submitted && opt.trim().toLowerCase() === q.answer.trim().toLowerCase();
+                          const isWrong = submitted && selected && !correct;
+                          return (
+                            <button
+                              key={opt}
+                              disabled={submitted}
+                              onClick={() => setAnswers({ ...answers, [i]: opt })}
+                              className={`flex items-center gap-2 rounded-xl border p-3 text-left text-sm transition-all ${
+                                isCorrect
+                                  ? "border-success bg-success/10 text-foreground"
+                                  : isWrong
+                                  ? "border-destructive bg-destructive/10 text-foreground"
+                                  : selected
+                                  ? "border-primary bg-primary/10"
+                                  : "border-border/60 hover:border-primary/50 hover:bg-primary/5"
+                              }`}
+                            >
+                              {submitted ? (
+                                isCorrect ? (
+                                  <Check className="h-4 w-4 text-success" />
+                                ) : isWrong ? (
+                                  <X className="h-4 w-4 text-destructive" />
                                 ) : (
-                                  <span className={`h-4 w-4 rounded-full border-2 ${selected ? "border-primary bg-primary" : "border-border"}`} />
-                                )}
-                                <span>{opt}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <Textarea
-                          value={ua}
-                          onChange={(e) => setAnswers({ ...answers, [i]: e.target.value })}
-                          placeholder="Type your answer…"
-                          rows={2}
-                          disabled={submitted}
-                          className="rounded-xl"
-                        />
-                      )}
+                                  <span className="h-4 w-4" />
+                                )
+                              ) : (
+                                <span className={`h-4 w-4 rounded-full border-2 ${selected ? "border-primary bg-primary" : "border-border"}`} />
+                              )}
+                              <span>{opt}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
 
                       <AnimatePresence>
                         {submitted && (
@@ -227,9 +216,9 @@ export default function Quiz() {
                             <div className={`font-semibold ${correct ? "text-success" : "text-destructive"}`}>
                               {correct ? "Correct ✓" : "Not quite"}
                             </div>
-                            {!correct && q.type === "conceptual" && (
+                            {!correct && (
                               <div className="mt-1 text-xs text-muted-foreground">
-                                Expected: <span className="text-foreground">{q.answer}</span>
+                                Correct answer: <span className="font-medium text-foreground">{q.answer}</span>
                               </div>
                             )}
                             <div className="mt-1 text-muted-foreground">{q.explanation}</div>
