@@ -144,14 +144,14 @@ Deno.serve(async (req) => {
                 items: {
                   type: "object",
                   properties: {
-                    type: { type: "string", enum: ["mcq", "conceptual"] },
+                    type: { type: "string", enum: ["mcq"] },
                     question: { type: "string" },
-                    options: { type: "array", items: { type: "string" } },
-                    answer: { type: "string" },
+                    options: { type: "array", items: { type: "string" }, minItems: 4, maxItems: 4 },
+                    answer: { type: "string", description: "Must match one of the options exactly" },
                     explanation: { type: "string" },
                     concept: { type: "string" },
                   },
-                  required: ["type", "question", "answer", "explanation", "concept"],
+                  required: ["type", "question", "options", "answer", "explanation", "concept"],
                 },
               },
             },
