@@ -75,7 +75,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const nav = isAdmin
     ? [...NAV, { to: "/admin", label: "Admin", icon: Shield, color: "from-red-500 to-orange-500" }]
     : NAV;
-  const initials = (user?.user_metadata?.display_name || user?.email || "U")
+  const initials = (profile?.display_name || user?.user_metadata?.display_name || user?.email || "U")
     .toString()
     .split(/[\s@]/)
     .filter(Boolean)
