@@ -55,10 +55,17 @@ const NAV = [
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [now, setNow] = useState(() => new Date());
   const { resolved, setTheme } = useTheme();
   const location = useLocation();
   const { user, signOut } = useAuth();
   const { isAdmin } = useIsAdmin();
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
   const nav = isAdmin
     ? [...NAV, { to: "/admin", label: "Admin", icon: Shield, color: "from-red-500 to-orange-500" }]
     : NAV;
@@ -69,6 +76,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
     .map((s: string) => s[0]?.toUpperCase())
     .slice(0, 2)
     .join("");
+
+  const timeStr = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const dateStr = now.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
 
   const SidebarBody = (
     <nav className="flex flex-col gap-1 p-3">
