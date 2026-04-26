@@ -27,6 +27,7 @@ const StudyTimer = lazy(() => import("./pages/StudyTimer"));
 const Admin = lazy(() => import("./pages/Admin"));
 const AssignmentMaker = lazy(() => import("./pages/AssignmentMaker"));
 const Settings = lazy(() => import("./pages/Settings"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -58,6 +59,7 @@ const App = () => (
             <Suspense fallback={<Loader />}>
               <Routes>
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/" element={<Protected><Dashboard /></Protected>} />
                 <Route path="/chat" element={<Protected><ChatCoach /></Protected>} />
                 <Route path="/quiz" element={<Protected><Quiz /></Protected>} />
