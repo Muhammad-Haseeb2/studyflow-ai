@@ -93,21 +93,39 @@ export default function Flashcards() {
               key={idx}
               initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
-              className={`flip-card-inner relative h-72 w-full cursor-pointer ${flipped ? "flipped" : ""}`}
-              onClick={() => setFlipped((f) => !f)}
-              style={{ transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)", transformStyle: "preserve-3d", transition: "transform 0.6s cubic-bezier(0.4,0,0.2,1)" }}
+              className="relative h-72 w-full"
             >
-              <div className="flip-face absolute inset-0 flex items-center justify-center rounded-3xl border border-border/50 bg-gradient-to-br from-card to-secondary p-8 text-center shadow-elevated">
-                <div className="space-y-3">
-                  <div className="text-xs uppercase tracking-widest text-muted-foreground">Question</div>
-                  <div className="text-xl font-semibold leading-snug">{cards[idx].question}</div>
-                  <div className="pt-2 text-xs text-muted-foreground">Tap to reveal</div>
+              <div
+                className="relative h-full w-full cursor-pointer"
+                style={{
+                  transformStyle: "preserve-3d",
+                  transition: "transform 0.6s cubic-bezier(0.4,0,0.2,1)",
+                  transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
+                }}
+                onClick={() => setFlipped((f) => !f)}
+              >
+                <div
+                  className="absolute inset-0 flex items-center justify-center rounded-3xl border border-border/50 bg-gradient-to-br from-card to-secondary p-8 text-center shadow-elevated"
+                  style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" }}
+                >
+                  <div className="space-y-3">
+                    <div className="text-xs uppercase tracking-widest text-muted-foreground">Question</div>
+                    <div className="text-xl font-semibold leading-snug">{cards[idx].question}</div>
+                    <div className="pt-2 text-xs text-muted-foreground">Tap to reveal</div>
+                  </div>
                 </div>
-              </div>
-              <div className="flip-face flip-back absolute inset-0 flex items-center justify-center rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-accent/10 p-8 text-center shadow-elevated">
-                <div className="space-y-3">
-                  <div className="text-xs uppercase tracking-widest text-primary">Answer</div>
-                  <div className="text-lg font-medium leading-relaxed">{cards[idx].answer}</div>
+                <div
+                  className="absolute inset-0 flex items-center justify-center rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-accent/10 p-8 text-center shadow-elevated"
+                  style={{
+                    backfaceVisibility: "hidden",
+                    WebkitBackfaceVisibility: "hidden",
+                    transform: "rotateY(180deg)",
+                  }}
+                >
+                  <div className="space-y-3">
+                    <div className="text-xs uppercase tracking-widest text-primary">Answer</div>
+                    <div className="text-lg font-medium leading-relaxed">{cards[idx].answer}</div>
+                  </div>
                 </div>
               </div>
             </motion.div>

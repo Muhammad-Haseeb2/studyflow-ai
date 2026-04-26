@@ -57,20 +57,26 @@ export default function StudyTimer() {
     return () => clearInterval(id);
   }, [running]);
 
-  // Pomodoro phase transitions
+  // Pomodoro phase transitions — save focus sessions when they complete
   useEffect(() => {
     if (mode !== "pomodoro" || !running) return;
     if (elapsed >= target) {
       beep();
       if (phase === "focus") {
         const dur = elapsed;
-        if (dur >= 60) {
-          addSession.mutate({
-            started_at: new Date(Date.now() - dur * 1000).toISOString(),
-            duration_sec: dur,
-            mode: "pomodoro",
-            label: "Focus",
-          });
+        if (dur >= 10) {
+          addSession.mutate(
+            {
+              started_at: new Date(Date.now() - dur * 1000).toISOString(),
+              duration_sec: dur,
+              mode: "pomodoro",
+              label: "Focus",
+            },
+            {
+              onSuccess: () => toast.success(`Focus saved: ${fmt(dur)}`),
+              onError: (e: any) => toast.error(e.message || "Failed to save session"),
+            }
+          );
         }
         toast.success("Focus done — take a break ☕");
         setPhase("break");
@@ -101,14 +107,23 @@ export default function StudyTimer() {
 
   const stop = () => {
     setRunning(false);
-    if (mode === "normal" && elapsed >= 60) {
-      addSession.mutate({
-        started_at: new Date(Date.now() - elapsed * 1000).toISOString(),
-        duration_sec: elapsed,
-        mode: "normal",
-        label: null,
-      });
-      toast.success(`Saved session: ${fmt(elapsed)}`);
+    // Save whatever has been accumulated this phase, in either mode (min 10s)
+    if (elapsed >= 10) {
+      const dur = elapsed;
+      addSession.mutate(
+        {
+          started_at: new Date(Date.now() - dur * 1000).toISOString(),
+          duration_sec: dur,
+          mode,
+          label: mode === "pomodoro" ? (phase === "focus" ? "Focus" : "Break") : null,
+        },
+        {
+          onSuccess: () => toast.success(`Saved session: ${fmt(dur)}`),
+          onError: (e: any) => toast.error(e.message || "Failed to save session"),
+        }
+      );
+    } else if (elapsed > 0) {
+      toast("Session too short to save (min 10s)");
     }
     reset();
   };
