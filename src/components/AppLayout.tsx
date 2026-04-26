@@ -22,7 +22,7 @@ import {
   Shield,
   GraduationCap,
 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -55,10 +55,17 @@ const NAV = [
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [now, setNow] = useState(() => new Date());
   const { resolved, setTheme } = useTheme();
   const location = useLocation();
   const { user, signOut } = useAuth();
   const { isAdmin } = useIsAdmin();
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
   const nav = isAdmin
     ? [...NAV, { to: "/admin", label: "Admin", icon: Shield, color: "from-red-500 to-orange-500" }]
     : NAV;
@@ -69,6 +76,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
     .map((s: string) => s[0]?.toUpperCase())
     .slice(0, 2)
     .join("");
+
+  const timeStr = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const dateStr = now.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
 
   const SidebarBody = (
     <nav className="flex flex-col gap-1 p-3">
@@ -174,6 +184,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 {nav.find((n) => (n.to === "/" ? location.pathname === "/" : location.pathname.startsWith(n.to)))?.label || "Studyflow"}
               </h1>
             </div>
+            <div className="hidden items-center gap-2 rounded-full border border-border/50 bg-muted/40 px-3 py-1 text-xs sm:flex">
+              <span className="font-mono font-semibold tabular-nums text-foreground">{timeStr}</span>
+              <span className="h-3 w-px bg-border" />
+              <span className="text-muted-foreground">{dateStr}</span>
+            </div>
+            <div className="flex flex-1 justify-end" />
             <Button
               variant="ghost"
               size="icon"
