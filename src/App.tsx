@@ -5,6 +5,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { ClockDensityProvider } from "@/hooks/useClockDensity";
 import { AppLayout } from "@/components/AppLayout";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -25,6 +26,7 @@ const CalendarPage = lazy(() => import("./pages/CalendarPage"));
 const StudyTimer = lazy(() => import("./pages/StudyTimer"));
 const Admin = lazy(() => import("./pages/Admin"));
 const AssignmentMaker = lazy(() => import("./pages/AssignmentMaker"));
+const Settings = lazy(() => import("./pages/Settings"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -47,6 +49,7 @@ const Protected = ({ children }: { children: React.ReactNode }) => (
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
+      <ClockDensityProvider>
       <TooltipProvider>
         <Toaster />
         <Sonner />
@@ -67,6 +70,7 @@ const App = () => (
                 <Route path="/calendar" element={<Protected><CalendarPage /></Protected>} />
                 <Route path="/timer" element={<Protected><StudyTimer /></Protected>} />
                 <Route path="/assignment" element={<Protected><AssignmentMaker /></Protected>} />
+                <Route path="/settings" element={<Protected><Settings /></Protected>} />
                 <Route
                   path="/admin"
                   element={
@@ -85,6 +89,7 @@ const App = () => (
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
+      </ClockDensityProvider>
     </ThemeProvider>
   </QueryClientProvider>
 );
