@@ -12,9 +12,9 @@ import { useAddQuizResult } from "@/lib/store";
 import { Progress } from "@/components/ui/progress";
 
 type QQ = {
-  type: "mcq" | "conceptual";
+  type: "mcq";
   question: string;
-  options?: string[];
+  options: string[];
   answer: string;
   explanation: string;
   concept: string;
