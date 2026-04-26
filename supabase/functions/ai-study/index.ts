@@ -164,7 +164,7 @@ Deno.serve(async (req) => {
           {
             role: "system",
             content:
-              "Generate a balanced quiz: 5 MCQs (4 options each) and 2 conceptual questions. Each item must include the correct answer, a clear explanation, and the underlying concept tag.",
+              "Generate a multiple-choice quiz with EXACTLY 8 questions. Every question MUST have type='mcq' with exactly 4 distinct options. The 'answer' field MUST be the EXACT TEXT of the correct option (must match one of the options character-for-character). Include a clear 1-2 sentence explanation and a short 'concept' tag for each question. Do NOT include conceptual / open-ended / text-input questions.",
           },
           { role: "user", content: `Topic / source material:\n${prompt}` },
         ],
