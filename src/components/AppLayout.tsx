@@ -21,6 +21,7 @@ import {
   X,
   Shield,
   GraduationCap,
+  Settings as SettingsIcon,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { LogOut, User as UserIcon } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { useClockDensity } from "@/hooks/useClockDensity";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -51,6 +53,7 @@ const NAV = [
   { to: "/notes", label: "Notes", icon: NotebookPen, color: "from-purple-500 to-pink-500" },
   { to: "/calendar", label: "Calendar", icon: Calendar, color: "from-orange-500 to-red-500" },
   { to: "/timer", label: "Study Timer", icon: Timer, color: "from-rose-500 to-pink-500" },
+  { to: "/settings", label: "Settings", icon: SettingsIcon, color: "from-slate-500 to-zinc-500" },
 ];
 
 export function AppLayout({ children }: { children: ReactNode }) {
@@ -60,6 +63,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
   const { user, signOut } = useAuth();
   const { isAdmin } = useIsAdmin();
+  const { density } = useClockDensity();
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
@@ -184,9 +188,14 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 {nav.find((n) => (n.to === "/" ? location.pathname === "/" : location.pathname.startsWith(n.to)))?.label || "Studyflow"}
               </h1>
             </div>
-            <div className="hidden items-center gap-2 rounded-full border border-border/50 bg-muted/40 px-3 py-1 text-xs sm:flex">
+            <div
+              className={cn(
+                "hidden items-center gap-2 rounded-full border border-border/50 bg-muted/40 text-foreground transition-all sm:flex",
+                density === "compact" ? "px-2.5 py-0.5 text-[11px]" : "px-4 py-1.5 text-sm"
+              )}
+            >
               <span className="font-mono font-semibold tabular-nums text-foreground">{timeStr}</span>
-              <span className="h-3 w-px bg-border" />
+              <span className={cn("w-px bg-border", density === "compact" ? "h-2.5" : "h-3.5")} />
               <span className="text-muted-foreground">{dateStr}</span>
             </div>
             <div className="flex flex-1 justify-end" />
