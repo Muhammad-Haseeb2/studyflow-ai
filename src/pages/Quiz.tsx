@@ -36,7 +36,15 @@ export default function Quiz() {
     setSubmitted(false);
     try {
       const data = await callAI<{ questions: QQ[] }>({ mode: "quiz", prompt: topic });
-      setQuestions(data.questions || []);
+      // Safety: keep only well-formed MCQs (4 options + answer matches one of them)
+      const onlyMcq = (data.questions || []).filter(
+        (q) =>
+          q.type === "mcq" &&
+          Array.isArray(q.options) &&
+          q.options.length >= 2 &&
+          q.options.some((o) => o.trim().toLowerCase() === (q.answer || "").trim().toLowerCase())
+      );
+      setQuestions(onlyMcq);
     } catch (e: any) {
       toast.error(e.message || "Quiz generation failed");
     } finally {
