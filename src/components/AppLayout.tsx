@@ -184,6 +184,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 {nav.find((n) => (n.to === "/" ? location.pathname === "/" : location.pathname.startsWith(n.to)))?.label || "Studyflow"}
               </h1>
             </div>
+            <div className="hidden items-center gap-2 rounded-full border border-border/50 bg-muted/40 px-3 py-1 text-xs sm:flex">
+              <span className="font-mono font-semibold tabular-nums text-foreground">{timeStr}</span>
+              <span className="h-3 w-px bg-border" />
+              <span className="text-muted-foreground">{dateStr}</span>
+            </div>
+            <div className="flex flex-1 justify-end" />
             <Button
               variant="ghost"
               size="icon"
