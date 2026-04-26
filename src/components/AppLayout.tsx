@@ -33,11 +33,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LogOut, User as UserIcon } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useClockDensity } from "@/hooks/useClockDensity";
+import { useProfile } from "@/hooks/useProfile";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -64,6 +65,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const { user, signOut } = useAuth();
   const { isAdmin } = useIsAdmin();
   const { density } = useClockDensity();
+  const { data: profile } = useProfile();
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
@@ -212,6 +214,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="rounded-full" aria-label="Account">
                     <Avatar className="h-8 w-8">
+                      {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt="Profile" />}
                       <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-primary-foreground text-xs">
                         {initials || <UserIcon className="h-4 w-4" />}
                       </AvatarFallback>
