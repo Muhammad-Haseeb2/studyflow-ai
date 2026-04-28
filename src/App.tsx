@@ -28,6 +28,18 @@ const Admin = lazy(() => import("./pages/Admin"));
 const AssignmentMaker = lazy(() => import("./pages/AssignmentMaker"));
 const Settings = lazy(() => import("./pages/Settings"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const Landing = lazy(() => import("./pages/Landing"));
+const About = lazy(() => import("./pages/legal/About"));
+const Privacy = lazy(() => import("./pages/legal/Privacy"));
+const Terms = lazy(() => import("./pages/legal/Terms"));
+
+import { useAuth } from "@/hooks/useAuth";
+const HomeRoute = () => {
+  const { session, loading } = useAuth();
+  if (loading) return <Loader />;
+  if (!session) return <Suspense fallback={<Loader />}><Landing /></Suspense>;
+  return <Protected><Dashboard /></Protected>;
+};
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -60,7 +72,11 @@ const App = () => (
               <Routes>
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
-                <Route path="/" element={<Protected><Dashboard /></Protected>} />
+                <Route path="/about" element={<Suspense fallback={<Loader />}><About /></Suspense>} />
+                <Route path="/privacy" element={<Suspense fallback={<Loader />}><Privacy /></Suspense>} />
+                <Route path="/terms" element={<Suspense fallback={<Loader />}><Terms /></Suspense>} />
+                <Route path="/" element={<HomeRoute />} />
+                <Route path="/dashboard" element={<Protected><Dashboard /></Protected>} />
                 <Route path="/chat" element={<Protected><ChatCoach /></Protected>} />
                 <Route path="/quiz" element={<Protected><Quiz /></Protected>} />
                 <Route path="/flashcards" element={<Protected><Flashcards /></Protected>} />

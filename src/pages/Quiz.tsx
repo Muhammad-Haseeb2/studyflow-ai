@@ -20,8 +20,14 @@ type QQ = {
   concept: string;
 };
 
+const MIN_Q = 3;
+const MAX_Q = 15;
+const DEFAULT_Q = 8;
+const PRESETS = [3, 5, 8, 10, 15];
+
 export default function Quiz() {
   const [topic, setTopic] = useState("");
+  const [count, setCount] = useState<number>(DEFAULT_Q);
   const [loading, setLoading] = useState(false);
   const [questions, setQuestions] = useState<QQ[]>([]);
   const [answers, setAnswers] = useState<Record<number, string>>({});
@@ -35,7 +41,7 @@ export default function Quiz() {
     setAnswers({});
     setSubmitted(false);
     try {
-      const data = await callAI<{ questions: QQ[] }>({ mode: "quiz", prompt: topic });
+      const data = await callAI<{ questions: QQ[] }>({ mode: "quiz", prompt: topic, count });
       // Safety: keep only well-formed MCQs (4 options + answer matches one of them)
       const onlyMcq = (data.questions || []).filter(
         (q) =>
@@ -44,7 +50,7 @@ export default function Quiz() {
           q.options.length >= 2 &&
           q.options.some((o) => o.trim().toLowerCase() === (q.answer || "").trim().toLowerCase())
       );
-      setQuestions(onlyMcq);
+      setQuestions(onlyMcq.slice(0, count));
     } catch (e: any) {
       toast.error(e.message || "Quiz generation failed");
     } finally {
@@ -90,7 +96,7 @@ export default function Quiz() {
 
       {questions.length === 0 ? (
         <Card className="border-border/50 shadow-soft">
-          <CardContent className="space-y-3 p-5">
+          <CardContent className="space-y-4 p-5">
             <Textarea
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
@@ -98,13 +104,53 @@ export default function Quiz() {
               rows={5}
               className="rounded-xl"
             />
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-semibold">Number of questions</label>
+                <span className="font-mono text-sm font-semibold text-primary">{count}</span>
+              </div>
+              <input
+                type="range"
+                min={MIN_Q}
+                max={MAX_Q}
+                step={1}
+                value={count}
+                onChange={(e) => setCount(parseInt(e.target.value, 10))}
+                className="w-full accent-primary"
+                aria-label="Number of questions"
+              />
+              <div className="flex flex-wrap gap-2">
+                {PRESETS.map((n) => {
+                  const active = count === n;
+                  return (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setCount(n)}
+                      className={`rounded-full border px-3 py-1 text-xs font-medium transition-all ${
+                        active
+                          ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                          : "border-border bg-background hover:border-primary/50 hover:bg-primary/5"
+                      }`}
+                    >
+                      {n}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Choose between {MIN_Q} and {MAX_Q} questions. More questions = deeper coverage.
+              </p>
+            </div>
+
             <Button
               onClick={generate}
               disabled={loading || !topic.trim()}
               className="w-full gradient-primary text-primary-foreground shadow-md sm:w-auto"
             >
               <Sparkles className="mr-2 h-4 w-4" />
-              {loading ? "Generating…" : "Generate quiz"}
+              {loading ? "Generating…" : `Generate ${count}-question quiz`}
             </Button>
           </CardContent>
         </Card>

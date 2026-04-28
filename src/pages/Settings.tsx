@@ -1,15 +1,24 @@
-// Settings page — profile, theme, clock density.
+// Settings page — profile, theme, clock density, time/timezone prefs, notifications.
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { Moon, Sun, Monitor, Clock, Camera, Loader2, Trash2 } from "lucide-react";
+import { Moon, Sun, Monitor, Clock, Camera, Loader2, Trash2, Globe, Bell, BellOff, RotateCcw } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useTheme } from "@/components/ThemeProvider";
-import { useClockDensity, type ClockDensity } from "@/hooks/useClockDensity";
+import {
+  useAppPrefs,
+  formatTime,
+  formatDate,
+  COMMON_TIMEZONES,
+  type ClockDensity,
+  type TimeFormat,
+} from "@/hooks/useAppPrefs";
 import { useProfile, useUpdateProfile, uploadAvatar } from "@/hooks/useProfile";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -23,9 +32,28 @@ const themeOptions = [
 
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
 
+const browserTz = (() => {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  } catch {
+    return "UTC";
+  }
+})();
+
 export default function Settings() {
   const { theme, setTheme } = useTheme();
-  const { density, setDensity } = useClockDensity();
+  const prefs = useAppPrefs();
+  const {
+    density,
+    setDensity,
+    timeFormat,
+    setTimeFormat,
+    timezone,
+    setTimezone,
+    resetToBrowserTimezone,
+    notificationsEnabled,
+    setNotificationsEnabled,
+  } = prefs;
   const { user } = useAuth();
   const { data: profile } = useProfile();
   const update = useUpdateProfile();
@@ -33,6 +61,7 @@ export default function Settings() {
   const [displayName, setDisplayName] = useState("");
   const [uploading, setUploading] = useState(false);
   const [now, setNow] = useState(() => new Date());
+  const [togglingNotif, setTogglingNotif] = useState(false);
 
   useEffect(() => {
     setDisplayName(profile?.display_name || "");
@@ -43,8 +72,11 @@ export default function Settings() {
     return () => clearInterval(id);
   }, []);
 
-  const timeStr = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  const dateStr = now.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
+  const timeStr = formatTime(now, prefs);
+  const dateStr = formatDate(now, prefs);
+
+  // Build a sorted timezone list that always includes the browser one.
+  const tzList = Array.from(new Set([browserTz, ...COMMON_TIMEZONES])).sort();
 
   const initials = (profile?.display_name || user?.email || "U")
     .split(/[\s@]/)
@@ -90,6 +122,22 @@ export default function Settings() {
       toast.error(err?.message || "Couldn't update name");
     }
   };
+
+  const toggleNotifications = async (next: boolean) => {
+    setTogglingNotif(true);
+    try {
+      await setNotificationsEnabled(next);
+      if (next) toast.success("Notifications enabled");
+      else toast("Notifications disabled");
+    } catch (err: any) {
+      toast.error(err?.message || "Couldn't update notifications");
+    } finally {
+      setTogglingNotif(false);
+    }
+  };
+
+  const notificationStatus =
+    typeof Notification !== "undefined" ? Notification.permission : "unsupported";
 
   return (
     <div className="space-y-6">
@@ -260,6 +308,120 @@ export default function Settings() {
               })}
             </RadioGroup>
           </section>
+        </CardContent>
+      </Card>
+
+      {/* Time & Region */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Globe className="h-4 w-4 text-muted-foreground" />
+            Time & Region
+          </CardTitle>
+          <CardDescription>Used everywhere we display dates and times.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-8">
+          <section className="space-y-3">
+            <Label className="text-sm font-semibold">Time format</Label>
+            <RadioGroup
+              value={timeFormat}
+              onValueChange={(v) => setTimeFormat(v as TimeFormat)}
+              className="grid grid-cols-2 gap-3"
+            >
+              {(["12h", "24h"] as TimeFormat[]).map((f) => {
+                const active = timeFormat === f;
+                const sample = formatTime(now, { timeFormat: f, timezone });
+                return (
+                  <Label
+                    key={f}
+                    htmlFor={`tf-${f}`}
+                    className={cn(
+                      "flex cursor-pointer flex-col items-start gap-1 rounded-xl border-2 p-4 transition-all",
+                      active ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/40"
+                    )}
+                  >
+                    <div className="flex w-full items-center justify-between">
+                      <span className="font-medium">{f === "12h" ? "12-hour" : "24-hour"}</span>
+                      <RadioGroupItem id={`tf-${f}`} value={f} />
+                    </div>
+                    <span className="font-mono text-2xl font-bold tabular-nums text-foreground">{sample}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {f === "12h" ? "e.g. 2:30 PM" : "e.g. 14:30"}
+                    </span>
+                  </Label>
+                );
+              })}
+            </RadioGroup>
+          </section>
+
+          <section className="space-y-3">
+            <Label htmlFor="tz" className="text-sm font-semibold">Time zone</Label>
+            <p className="text-xs text-muted-foreground">
+              Auto-detected from your browser ({browserTz}). You can override it below.
+            </p>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Select value={timezone} onValueChange={setTimezone}>
+                <SelectTrigger id="tz" className="sm:max-w-xs">
+                  <SelectValue placeholder="Pick a time zone" />
+                </SelectTrigger>
+                <SelectContent className="max-h-72">
+                  {tzList.map((tz) => (
+                    <SelectItem key={tz} value={tz}>
+                      {tz} {tz === browserTz && <span className="ml-1 text-xs text-muted-foreground">(detected)</span>}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  resetToBrowserTimezone();
+                  toast.success(`Reset to ${browserTz}`);
+                }}
+                disabled={timezone === browserTz}
+              >
+                <RotateCcw className="mr-2 h-3.5 w-3.5" /> Use detected
+              </Button>
+            </div>
+          </section>
+        </CardContent>
+      </Card>
+
+      {/* Notifications */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            {notificationsEnabled ? (
+              <Bell className="h-4 w-4 text-primary" />
+            ) : (
+              <BellOff className="h-4 w-4 text-muted-foreground" />
+            )}
+            Notifications
+          </CardTitle>
+          <CardDescription>Browser alerts for timer completions, calendar reminders, and study nudges.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between gap-4 rounded-xl border border-border/60 p-4">
+            <div className="min-w-0">
+              <p className="font-medium">Enable browser notifications</p>
+              <p className="text-xs text-muted-foreground">
+                {notificationStatus === "granted"
+                  ? "Permission granted by your browser."
+                  : notificationStatus === "denied"
+                  ? "Blocked by your browser. Update site permissions to re-enable."
+                  : notificationStatus === "unsupported"
+                  ? "Your browser doesn't support notifications."
+                  : "We'll ask for permission the first time you turn this on."}
+              </p>
+            </div>
+            <Switch
+              checked={notificationsEnabled}
+              disabled={togglingNotif || notificationStatus === "unsupported" || notificationStatus === "denied"}
+              onCheckedChange={toggleNotifications}
+              aria-label="Enable notifications"
+            />
+          </div>
         </CardContent>
       </Card>
     </div>

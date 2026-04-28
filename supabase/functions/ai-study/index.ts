@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { mode, prompt, context, target, history } = await req.json();
+    const { mode, prompt, context, target, history, count } = await req.json();
 
     // Streaming chat
     if (mode === "chat-simple" || mode === "chat-advanced" || mode === "chat-eli10") {
@@ -159,12 +159,13 @@ Deno.serve(async (req) => {
           },
         },
       };
+      const qCount = Math.max(3, Math.min(15, Number(count) || 8));
       const result = await callAI(
         [
           {
             role: "system",
             content:
-              "Generate a multiple-choice quiz with EXACTLY 8 questions. Every question MUST have type='mcq' with exactly 4 distinct options. The 'answer' field MUST be the EXACT TEXT of the correct option (must match one of the options character-for-character). Include a clear 1-2 sentence explanation and a short 'concept' tag for each question. Do NOT include conceptual / open-ended / text-input questions.",
+              `Generate a multiple-choice quiz with EXACTLY ${qCount} questions. Cover the full breadth of the topic — include core definitions, key principles, applications, and at least one slightly tricky question to test understanding. Every question MUST have type='mcq' with exactly 4 distinct options. The 'answer' field MUST be the EXACT TEXT of the correct option (must match one of the options character-for-character). Include a clear 1-2 sentence explanation and a short 'concept' tag for each question. Do NOT include conceptual / open-ended / text-input questions.`,
           },
           { role: "user", content: `Topic / source material:\n${prompt}` },
         ],

@@ -1,18 +1,25 @@
-// Study Timer — Supabase-backed sessions, normal & Pomodoro.
+// Study Timer — Supabase-backed sessions, normal & Pomodoro with manual focus duration.
 import { useEffect, useRef, useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { Timer as TimerIcon, Play, Pause, RotateCcw, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
 import { useStudySessions, useAddStudySession } from "@/lib/store";
+import { useAppPrefs } from "@/hooks/useAppPrefs";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 type Mode = "normal" | "pomodoro";
 type Phase = "focus" | "break";
 
-const POMO_FOCUS = 25 * 60;
-const POMO_BREAK = 5 * 60;
+const FOCUS_PRESETS_MIN = [15, 25, 30, 45, 60];
+const DEFAULT_FOCUS_MIN = 30;
+const DEFAULT_BREAK_MIN = 5;
+const MIN_FOCUS = 1;
+const MAX_FOCUS = 180;
 
 function fmt(sec: number) {
   const m = Math.floor(sec / 60).toString().padStart(2, "0");
@@ -38,17 +45,33 @@ function beep() {
   }
 }
 
+function notify(title: string, body: string) {
+  try {
+    if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+      new Notification(title, { body, icon: "/favicon.ico" });
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
 export default function StudyTimer() {
   const [mode, setMode] = useState<Mode>("pomodoro");
   const [phase, setPhase] = useState<Phase>("focus");
   const [running, setRunning] = useState(false);
   const [elapsed, setElapsed] = useState(0);
+  const [focusMin, setFocusMin] = useState<number>(DEFAULT_FOCUS_MIN);
+  const [breakMin, setBreakMin] = useState<number>(DEFAULT_BREAK_MIN);
+  const [customInput, setCustomInput] = useState<string>(String(DEFAULT_FOCUS_MIN));
   const { data: sessions = [] } = useStudySessions();
   const addSession = useAddStudySession();
+  const { notificationsEnabled } = useAppPrefs();
   const startedAtRef = useRef<number | null>(null);
   const phaseStartRef = useRef<number | null>(null);
 
-  const target = mode === "pomodoro" ? (phase === "focus" ? POMO_FOCUS : POMO_BREAK) : 0;
+  const focusSec = focusMin * 60;
+  const breakSec = breakMin * 60;
+  const target = mode === "pomodoro" ? (phase === "focus" ? focusSec : breakSec) : 0;
   const remaining = mode === "pomodoro" ? Math.max(0, target - elapsed) : elapsed;
 
   useEffect(() => {
@@ -79,15 +102,17 @@ export default function StudyTimer() {
           );
         }
         toast.success("Focus done — take a break ☕");
+        if (notificationsEnabled) notify("Focus complete 🎯", `Great job! Time for a ${breakMin}-minute break.`);
         setPhase("break");
       } else {
         toast("Break over — back to focus 🎯");
+        if (notificationsEnabled) notify("Break over ⏰", "Back to focus — let's go!");
         setPhase("focus");
       }
       setElapsed(0);
       phaseStartRef.current = Date.now();
     }
-  }, [elapsed, mode, phase, running, target]);
+  }, [elapsed, mode, phase, running, target, focusMin, breakMin, notificationsEnabled, addSession]);
 
   const start = () => {
     if (!startedAtRef.current) startedAtRef.current = Date.now();
@@ -107,7 +132,6 @@ export default function StudyTimer() {
 
   const stop = () => {
     setRunning(false);
-    // Save whatever has been accumulated this phase, in either mode (min 10s)
     if (elapsed >= 10) {
       const dur = elapsed;
       addSession.mutate(
@@ -126,6 +150,26 @@ export default function StudyTimer() {
       toast("Session too short to save (min 10s)");
     }
     reset();
+  };
+
+  const applyFocusMinutes = (m: number) => {
+    const clamped = Math.max(MIN_FOCUS, Math.min(MAX_FOCUS, Math.round(m)));
+    setFocusMin(clamped);
+    setCustomInput(String(clamped));
+    if (mode === "pomodoro" && phase === "focus") {
+      // resetting elapsed avoids landing past the new target
+      setRunning(false);
+      setElapsed(0);
+    }
+  };
+
+  const applyCustom = () => {
+    const n = parseInt(customInput, 10);
+    if (Number.isNaN(n)) {
+      setCustomInput(String(focusMin));
+      return;
+    }
+    applyFocusMinutes(n);
   };
 
   const pct = mode === "pomodoro" ? (elapsed / target) * 100 : Math.min(100, (elapsed / 3600) * 100);
@@ -161,11 +205,87 @@ export default function StudyTimer() {
         }
       />
 
+      {/* Duration controls (Pomodoro only) */}
+      {mode === "pomodoro" && (
+        <Card className="border-border/50 shadow-soft">
+          <CardContent className="space-y-4 p-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <Label className="text-sm font-semibold">Focus duration</Label>
+                <p className="text-xs text-muted-foreground">Pick a preset or enter your own (1–{MAX_FOCUS} min).</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Input
+                  type="number"
+                  min={MIN_FOCUS}
+                  max={MAX_FOCUS}
+                  value={customInput}
+                  disabled={running}
+                  onChange={(e) => setCustomInput(e.target.value)}
+                  onBlur={applyCustom}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      applyCustom();
+                    }
+                  }}
+                  className="w-24"
+                  aria-label="Custom focus minutes"
+                />
+                <span className="text-xs text-muted-foreground">min</span>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {FOCUS_PRESETS_MIN.map((m) => {
+                const active = focusMin === m;
+                return (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => applyFocusMinutes(m)}
+                    disabled={running}
+                    className={cn(
+                      "rounded-full border px-4 py-1.5 text-sm font-medium transition-all disabled:opacity-50",
+                      active
+                        ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                        : "border-border bg-background hover:border-primary/50 hover:bg-primary/5"
+                    )}
+                  >
+                    {m} min
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Label htmlFor="break-min" className="text-xs text-muted-foreground">
+                Break length
+              </Label>
+              <Input
+                id="break-min"
+                type="number"
+                min={1}
+                max={60}
+                value={breakMin}
+                disabled={running}
+                onChange={(e) => {
+                  const n = parseInt(e.target.value, 10);
+                  if (!Number.isNaN(n)) setBreakMin(Math.max(1, Math.min(60, n)));
+                }}
+                className="w-20"
+              />
+              <span className="text-xs text-muted-foreground">min</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card className="border-border/50 shadow-soft">
         <CardContent className="flex flex-col items-center gap-6 p-8">
           {mode === "pomodoro" && (
             <div className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider ${phase === "focus" ? "bg-primary/15 text-primary" : "bg-success/15 text-success"}`}>
-              {phase === "focus" ? "Focus" : "Break"}
+              {phase === "focus" ? `Focus · ${focusMin}m` : `Break · ${breakMin}m`}
             </div>
           )}
 
@@ -199,7 +319,7 @@ export default function StudyTimer() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-center gap-2">
             {!running ? (
               <Button onClick={start} className="gradient-primary text-primary-foreground shadow-md" size="lg">
                 <Play className="mr-2 h-4 w-4" /> Start
