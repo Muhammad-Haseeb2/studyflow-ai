@@ -85,9 +85,11 @@ export default function Auth() {
   const handleGoogle = async () => {
     setBusy(true);
     try {
-      const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
-      });
+      // Let Lovable Cloud manage the redirect — passing an explicit
+      // redirect_uri requires the origin to be whitelisted, which is the
+      // most common cause of the post-OAuth 404. Omitting it sends the
+      // user back through the managed callback that always works.
+      const result = await lovable.auth.signInWithOAuth("google");
       if (result.error) {
         setBusy(false);
         toast.error(result.error.message || "Google sign-in failed");
