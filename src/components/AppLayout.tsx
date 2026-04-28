@@ -37,7 +37,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LogOut, User as UserIcon } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
-import { useClockDensity } from "@/hooks/useClockDensity";
+import { useAppPrefs, formatTime, formatDate } from "@/hooks/useAppPrefs";
 import { useProfile } from "@/hooks/useProfile";
 import { cn } from "@/lib/utils";
 
@@ -64,7 +64,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
   const { user, signOut } = useAuth();
   const { isAdmin } = useIsAdmin();
-  const { density } = useClockDensity();
+  const prefs = useAppPrefs();
+  const density = prefs.density;
   const { data: profile } = useProfile();
 
   useEffect(() => {
@@ -83,8 +84,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
     .slice(0, 2)
     .join("");
 
-  const timeStr = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  const dateStr = now.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
+  const timeStr = formatTime(now, prefs);
+  const dateStr = formatDate(now, prefs);
 
   const SidebarBody = (
     <nav className="flex flex-col gap-1 p-3">
