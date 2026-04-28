@@ -31,14 +31,24 @@ export default function Voice() {
   const [reply, setReply] = useState("");
   const [loading, setLoading] = useState(false);
   const recogRef = useRef<any>(null);
+  const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
+  const spokenLenRef = useRef(0);
 
   const Recognition: any =
     typeof window !== "undefined" ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition : null;
   const supportsSTT = !!Recognition;
   const supportsTTS = typeof window !== "undefined" && "speechSynthesis" in window;
 
+  // Preload voices (Chrome loads them async)
   useEffect(() => {
+    if (!supportsTTS) return;
+    const load = () => {
+      voicesRef.current = window.speechSynthesis.getVoices();
+    };
+    load();
+    window.speechSynthesis.onvoiceschanged = load;
     return () => {
+      window.speechSynthesis.onvoiceschanged = null;
       try {
         recogRef.current?.stop();
         window.speechSynthesis?.cancel();
@@ -46,7 +56,36 @@ export default function Voice() {
         /* ignore */
       }
     };
-  }, []);
+  }, [supportsTTS]);
+
+  const pickVoice = (target: string): SpeechSynthesisVoice | undefined => {
+    const voices = voicesRef.current;
+    if (!voices?.length) return undefined;
+    const baseLang = target.split("-")[0].toLowerCase();
+    // 1) exact match (e.g. ur-PK)
+    let v = voices.find((vo) => vo.lang.toLowerCase() === target.toLowerCase());
+    if (v) return v;
+    // 2) same base language (ur-IN, ur, hi-IN as fallback for Urdu)
+    v = voices.find((vo) => vo.lang.toLowerCase().startsWith(baseLang));
+    if (v) return v;
+    // 3) Urdu special: fall back to Hindi voices (closest phonetics)
+    if (baseLang === "ur") {
+      v = voices.find((vo) => vo.lang.toLowerCase().startsWith("hi"));
+      if (v) return v;
+    }
+    return undefined;
+  };
+
+  // Strip markdown for cleaner TTS
+  const cleanForTTS = (text: string) =>
+    text
+      .replace(/```[\s\S]*?```/g, " ")
+      .replace(/`([^`]+)`/g, "$1")
+      .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+      .replace(/[#>*_~]/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
 
   const startListening = () => {
     if (!Recognition) return toast.error("Speech recognition not supported in this browser");
@@ -84,15 +123,24 @@ export default function Voice() {
     setListening(false);
   };
 
-  const speak = (text: string) => {
+  const speakChunk = (text: string) => {
     if (!supportsTTS || !voiceOn) return;
-    window.speechSynthesis.cancel();
-    const utt = new SpeechSynthesisUtterance(text.replace(/[#*_`>\-]/g, ""));
-    utt.lang = lang;
-    utt.rate = 1;
+    const cleaned = cleanForTTS(text);
+    if (!cleaned) return;
+    const utt = new SpeechSynthesisUtterance(cleaned);
+    const voice = pickVoice(lang);
+    if (voice) utt.voice = voice;
+    utt.lang = voice?.lang || lang;
+    // Slightly slower for non-English to sound more natural
+    utt.rate = lang.startsWith("en") ? 1.0 : 0.92;
     utt.pitch = 1;
     utt.onstart = () => setSpeaking(true);
-    utt.onend = () => setSpeaking(false);
+    utt.onend = () => {
+      // only mark done when nothing else queued
+      if (!window.speechSynthesis.pending && !window.speechSynthesis.speaking) {
+        setSpeaking(false);
+      }
+    };
     window.speechSynthesis.speak(utt);
   };
 
@@ -101,6 +149,8 @@ export default function Voice() {
     if (!text) return;
     setLoading(true);
     setReply("");
+    spokenLenRef.current = 0;
+    if (supportsTTS) window.speechSynthesis.cancel();
     let acc = "";
     try {
       await streamChat({
@@ -110,10 +160,23 @@ export default function Voice() {
         onDelta: (chunk) => {
           acc += chunk;
           setReply(acc);
+          // Speak as soon as we have a complete sentence — eliminates the
+          // "wait until full reply" perceived delay.
+          if (!voiceOn) return;
+          const pending = acc.slice(spokenLenRef.current);
+          const match = pending.match(/^([\s\S]*?[.!?؟。！？\n])/);
+          if (match) {
+            speakChunk(match[1]);
+            spokenLenRef.current += match[1].length;
+          }
         },
         onError: (m) => toast.error(m),
       });
-      speak(acc);
+      // Speak any trailing text that didn't end with punctuation
+      if (voiceOn) {
+        const tail = acc.slice(spokenLenRef.current);
+        if (tail.trim()) speakChunk(tail);
+      }
     } catch (e: any) {
       /* handled */
     } finally {
