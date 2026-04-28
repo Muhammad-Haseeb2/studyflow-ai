@@ -20,8 +20,14 @@ type QQ = {
   concept: string;
 };
 
+const MIN_Q = 3;
+const MAX_Q = 15;
+const DEFAULT_Q = 8;
+const PRESETS = [3, 5, 8, 10, 15];
+
 export default function Quiz() {
   const [topic, setTopic] = useState("");
+  const [count, setCount] = useState<number>(DEFAULT_Q);
   const [loading, setLoading] = useState(false);
   const [questions, setQuestions] = useState<QQ[]>([]);
   const [answers, setAnswers] = useState<Record<number, string>>({});
@@ -35,7 +41,7 @@ export default function Quiz() {
     setAnswers({});
     setSubmitted(false);
     try {
-      const data = await callAI<{ questions: QQ[] }>({ mode: "quiz", prompt: topic });
+      const data = await callAI<{ questions: QQ[] }>({ mode: "quiz", prompt: topic, count });
       // Safety: keep only well-formed MCQs (4 options + answer matches one of them)
       const onlyMcq = (data.questions || []).filter(
         (q) =>
@@ -44,7 +50,7 @@ export default function Quiz() {
           q.options.length >= 2 &&
           q.options.some((o) => o.trim().toLowerCase() === (q.answer || "").trim().toLowerCase())
       );
-      setQuestions(onlyMcq);
+      setQuestions(onlyMcq.slice(0, count));
     } catch (e: any) {
       toast.error(e.message || "Quiz generation failed");
     } finally {
