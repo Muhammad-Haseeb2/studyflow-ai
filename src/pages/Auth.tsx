@@ -201,8 +201,11 @@ export default function Auth() {
         >
           <Card className="w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
             <h2 className="mb-1 text-lg font-bold">Reset your password</h2>
-            <p className="mb-4 text-sm text-muted-foreground">
+            <p className="mb-1 text-sm text-muted-foreground">
               We'll email you a secure link to set a new password.
+            </p>
+            <p className="mb-4 text-xs text-muted-foreground/80">
+              The link will open <span className="font-medium">{window.location.host}</span>. Request it from your live site if you want it to land there.
             </p>
             <form onSubmit={handleForgot} className="space-y-3">
               <div>
