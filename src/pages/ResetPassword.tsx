@@ -53,6 +53,7 @@ export default function ResetPassword() {
 
     const verifyLink = async () => {
       const code = getParamFromUrl("code");
+      const recoveryToken = getParamFromUrl("token") || getParamFromUrl("token_hash");
       const accessToken = getParamFromUrl("access_token");
       const refreshToken = getParamFromUrl("refresh_token");
       const type = getParamFromUrl("type");
@@ -71,13 +72,23 @@ export default function ResetPassword() {
         return markReady();
       }
 
+      if (recoveryToken) {
+        const { error } = await supabase.auth.verifyOtp({ token_hash: recoveryToken, type: "recovery" });
+        if (error) return markInvalid(error.message);
+        window.history.replaceState({}, document.title, "/reset-password");
+        return markReady();
+      }
+
       const { data } = await supabase.auth.getSession();
       if (data.session && type === "recovery") return markReady();
       markInvalid("Open the latest password reset link from your email to continue.");
     };
 
     verifyLink();
-    return () => sub.subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   const submit = async (e: React.FormEvent) => {
