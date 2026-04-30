@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
-import { Loader2, KeyRound } from "lucide-react";
+import { CheckCircle2, KeyRound, Loader2, ShieldAlert } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,25 +13,82 @@ import { supabase } from "@/integrations/supabase/client";
 const passwordSchema = z
   .string()
   .min(8, { message: "At least 8 characters" })
+  .regex(/[A-Z]/, { message: "Add at least one uppercase letter" })
+  .regex(/[a-z]/, { message: "Add at least one lowercase letter" })
+  .regex(/[0-9]/, { message: "Add at least one number" })
   .max(72, { message: "Max 72 characters" });
+
+type ResetState = "verifying" | "ready" | "invalid" | "success";
+
+const getParamFromUrl = (key: string) => {
+  const search = new URLSearchParams(window.location.search);
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  return search.get(key) || hash.get(key);
+};
 
 export default function ResetPassword() {
   const navigate = useNavigate();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
-  const [ready, setReady] = useState(false);
+  const [state, setState] = useState<ResetState>("verifying");
+  const [message, setMessage] = useState("Verifying your recovery link…");
 
   useEffect(() => {
-    // When the user follows the recovery link, Supabase fires PASSWORD_RECOVERY
+    let mounted = true;
+    const markReady = () => {
+      if (!mounted) return;
+      setState("ready");
+      setMessage("Choose a strong new password for your account.");
+    };
+    const markInvalid = (text = "This reset link is invalid, expired, or already used.") => {
+      if (!mounted) return;
+      setState("invalid");
+      setMessage(text);
+    };
+
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") setReady(true);
+      if (event === "PASSWORD_RECOVERY") markReady();
     });
-    // Fallback: if there's already a session via the link
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) setReady(true);
-    });
-    return () => sub.subscription.unsubscribe();
+
+    const verifyLink = async () => {
+      const code = getParamFromUrl("code");
+      const recoveryToken = getParamFromUrl("token") || getParamFromUrl("token_hash");
+      const accessToken = getParamFromUrl("access_token");
+      const refreshToken = getParamFromUrl("refresh_token");
+      const type = getParamFromUrl("type");
+
+      if (accessToken && refreshToken) {
+        const { error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+        if (error) return markInvalid(error.message);
+        window.history.replaceState({}, document.title, "/reset-password");
+        return markReady();
+      }
+
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (error) return markInvalid(error.message);
+        window.history.replaceState({}, document.title, "/reset-password");
+        return markReady();
+      }
+
+      if (recoveryToken) {
+        const { error } = await supabase.auth.verifyOtp({ token_hash: recoveryToken, type: "recovery" });
+        if (error) return markInvalid(error.message);
+        window.history.replaceState({}, document.title, "/reset-password");
+        return markReady();
+      }
+
+      const { data } = await supabase.auth.getSession();
+      if (data.session && type === "recovery") return markReady();
+      markInvalid("Open the latest password reset link from your email to continue.");
+    };
+
+    verifyLink();
+    return () => {
+      mounted = false;
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   const submit = async (e: React.FormEvent) => {
@@ -43,8 +100,10 @@ export default function ResetPassword() {
     const { error } = await supabase.auth.updateUser({ password: pv.data });
     setBusy(false);
     if (error) return toast.error(error.message);
-    toast.success("Password updated — you're signed in!");
-    navigate("/", { replace: true });
+    setState("success");
+    setMessage("Password updated successfully. You can now sign in with your new password.");
+    toast.success("Password updated successfully");
+    setTimeout(() => navigate("/auth", { replace: true }), 1800);
   };
 
   return (
@@ -55,12 +114,10 @@ export default function ResetPassword() {
             <KeyRound className="h-6 w-6 text-primary-foreground" />
           </div>
           <h1 className="text-2xl font-bold">Reset password</h1>
-          <p className="text-sm text-muted-foreground">
-            {ready ? "Choose a new password for your account." : "Verifying recovery link…"}
-          </p>
+          <p className="text-sm text-muted-foreground">{message}</p>
         </div>
 
-        {ready ? (
+        {state === "ready" ? (
           <form onSubmit={submit} className="space-y-3">
             <div>
               <Label htmlFor="np">New password</Label>
@@ -72,7 +129,7 @@ export default function ResetPassword() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
-              <p className="mt-1 text-xs text-muted-foreground">Min 8 characters</p>
+              <p className="mt-1 text-xs text-muted-foreground">Min 8 characters with uppercase, lowercase, and a number</p>
             </div>
             <div>
               <Label htmlFor="cp">Confirm password</Label>
@@ -89,9 +146,22 @@ export default function ResetPassword() {
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Update password"}
             </Button>
           </form>
+        ) : state === "success" ? (
+          <div className="flex flex-col items-center gap-3 rounded-lg border border-border bg-muted/40 p-6 text-center">
+            <CheckCircle2 className="h-8 w-8 text-success" />
+            <p className="text-sm font-medium">Redirecting to sign in…</p>
+          </div>
+        ) : state === "invalid" ? (
+          <div className="space-y-4 rounded-lg border border-border bg-muted/40 p-5 text-center">
+            <ShieldAlert className="mx-auto h-8 w-8 text-destructive" />
+            <Button type="button" className="w-full" onClick={() => navigate("/auth", { replace: true })}>
+              Request a new link
+            </Button>
+          </div>
         ) : (
-          <div className="flex justify-center py-6">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <div className="flex flex-col items-center gap-3 py-6 text-sm text-muted-foreground">
+            <Loader2 className="h-6 w-6 animate-spin" />
+            <span>Checking reset token…</span>
           </div>
         )}
       </Card>

@@ -20,6 +20,12 @@ const passwordSchema = z
   .max(72, { message: "Max 72 characters" });
 const nameSchema = z.string().trim().min(1, { message: "Name required" }).max(100);
 
+const getResetRedirectUrl = () => {
+  const configuredUrl = import.meta.env.VITE_APP_URL?.replace(/\/$/, "");
+  const origin = configuredUrl || window.location.origin;
+  return `${origin}/reset-password`;
+};
+
 export default function Auth() {
   const { session, loading } = useAuth();
   const navigate = useNavigate();
@@ -108,7 +114,7 @@ export default function Auth() {
     if (!ev.success) return toast.error(ev.error.issues[0].message);
     setBusy(true);
     const { error } = await supabase.auth.resetPasswordForEmail(ev.data, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: getResetRedirectUrl(),
     });
     setBusy(false);
     if (error) return toast.error(error.message);
@@ -205,7 +211,7 @@ export default function Auth() {
               We'll email you a secure link to set a new password.
             </p>
             <p className="mb-4 text-xs text-muted-foreground/80">
-              The link will open <span className="font-medium">{window.location.host}</span>. Request it from your live site if you want it to land there.
+              The link will open <span className="font-medium">{new URL(getResetRedirectUrl()).host}</span>. Set your production app URL before sending live reset emails.
             </p>
             <form onSubmit={handleForgot} className="space-y-3">
               <div>
