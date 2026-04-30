@@ -168,10 +168,59 @@ export default function ResetPassword() {
             <p className="text-sm font-medium">Redirecting to sign in…</p>
           </div>
         ) : state === "invalid" ? (
-          <div className="space-y-4 rounded-lg border border-border bg-muted/40 p-5 text-center">
-            <ShieldAlert className="mx-auto h-8 w-8 text-destructive" />
-            <Button type="button" className="w-full" onClick={() => navigate("/auth", { replace: true })}>
-              Request a new link
+          <div className="space-y-4 rounded-lg border border-destructive/30 bg-destructive/5 p-5">
+            <div className="flex flex-col items-center text-center">
+              <ShieldAlert className="h-9 w-9 text-destructive" aria-hidden="true" />
+              <h2 className="mt-2 text-base font-semibold">Reset link expired or already used</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                For your security, password reset links can only be used once and expire after a short time. Request a new link below.
+              </p>
+            </div>
+
+            {resent ? (
+              <div className="flex items-start gap-3 rounded-md border border-border bg-background/60 p-3 text-sm">
+                <CheckCircle2 className="mt-0.5 h-4 w-4 text-success" aria-hidden="true" />
+                <div>
+                  <p className="font-medium">Check your inbox</p>
+                  <p className="text-muted-foreground">
+                    If an account exists for <span className="font-medium">{resendEmail}</span>, a new reset link is on its way. The link is valid for a limited time.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={requestNewLink} className="space-y-3">
+                <div>
+                  <Label htmlFor="resend-email">Email address</Label>
+                  <Input
+                    id="resend-email"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="you@example.com"
+                    value={resendEmail}
+                    onChange={(e) => setResendEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full gradient-primary" disabled={resending}>
+                  {resending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Mail className="mr-2 h-4 w-4" aria-hidden="true" />
+                      Send a new reset link
+                    </>
+                  )}
+                </Button>
+              </form>
+            )}
+
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full"
+              onClick={() => navigate("/auth", { replace: true })}
+            >
+              Back to sign in
             </Button>
           </div>
         ) : (
