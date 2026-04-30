@@ -94,7 +94,16 @@ export default function Quiz() {
         gradient="from-pink-500 to-rose-500"
       />
 
-      {questions.length === 0 ? (
+      {loading && questions.length === 0 && (
+        <Card className="border-border/50 shadow-soft">
+          <CardContent className="flex flex-col items-center gap-3 p-10 text-center">
+            <Sparkles className="h-8 w-8 animate-pulse text-primary" />
+            <p className="text-sm text-muted-foreground">Crafting {count} questions…</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {!loading && questions.length === 0 ? (
         <Card className="border-border/50 shadow-soft">
           <CardContent className="space-y-4 p-5">
             <Textarea
