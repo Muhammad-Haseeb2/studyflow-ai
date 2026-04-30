@@ -82,6 +82,25 @@ export default function Flashcards() {
         </CardContent>
       </Card>
 
+      {loading && cards.length === 0 && (
+        <Card className="border-border/50 shadow-soft">
+          <CardContent className="flex flex-col items-center gap-3 p-10 text-center">
+            <Sparkles className="h-8 w-8 animate-pulse text-primary" />
+            <p className="text-sm text-muted-foreground">Generating your flashcards…</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {!loading && cards.length === 0 && decks.length === 0 && (
+        <Card className="border-dashed border-border/60 bg-muted/30">
+          <CardContent className="flex flex-col items-center gap-2 p-10 text-center">
+            <Layers className="h-10 w-10 text-muted-foreground/50" />
+            <p className="text-sm font-medium">No flashcards yet</p>
+            <p className="text-xs text-muted-foreground">Enter a topic above to generate your first deck.</p>
+          </CardContent>
+        </Card>
+      )}
+
       {cards.length > 0 && (
         <div className="flex flex-col items-center gap-4">
           <div className="text-sm text-muted-foreground">
