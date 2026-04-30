@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { forwardRef, lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -47,9 +47,10 @@ const queryClient = new QueryClient({
   },
 });
 
-const Loader = () => (
-  <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">Loading…</div>
-);
+const Loader = forwardRef<HTMLDivElement>((_, ref) => (
+  <div ref={ref} className="flex h-64 items-center justify-center text-sm text-muted-foreground">Loading…</div>
+));
+Loader.displayName = "Loader";
 
 const Protected = ({ children }: { children: React.ReactNode }) => (
   <ProtectedRoute>
