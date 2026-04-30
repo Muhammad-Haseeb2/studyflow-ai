@@ -33,6 +33,9 @@ export default function ResetPassword() {
   const [busy, setBusy] = useState(false);
   const [state, setState] = useState<ResetState>("verifying");
   const [message, setMessage] = useState("Verifying your recovery link…");
+  const [resendEmail, setResendEmail] = useState("");
+  const [resending, setResending] = useState(false);
+  const [resent, setResent] = useState(false);
 
   useEffect(() => {
     let mounted = true;
