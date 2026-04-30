@@ -109,6 +109,19 @@ export default function ResetPassword() {
     setTimeout(() => navigate("/auth", { replace: true }), 1800);
   };
 
+  const requestNewLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const emailCheck = z.string().email().safeParse(resendEmail.trim());
+    if (!emailCheck.success) return toast.error("Enter a valid email address");
+    setResending(true);
+    const redirectTo = `${import.meta.env.VITE_APP_URL || window.location.origin}/reset-password`;
+    const { error } = await supabase.auth.resetPasswordForEmail(emailCheck.data, { redirectTo });
+    setResending(false);
+    if (error) return toast.error(error.message);
+    setResent(true);
+    toast.success("New reset link sent. Check your inbox.");
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
       <Card className="w-full max-w-md p-6 shadow-soft border-border/50">
