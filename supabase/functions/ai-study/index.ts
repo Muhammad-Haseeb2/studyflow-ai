@@ -55,7 +55,14 @@ async function callAI(messages: any[], opts: { model?: string; tools?: any[]; to
 
   if (!r.ok) {
     const text = await r.text();
-    return { error: text, status: r.status };
+    console.error("ai-study gateway error", r.status, text);
+    const safe =
+      r.status === 429
+        ? "Rate limit reached, please slow down."
+        : r.status === 402
+          ? "AI credits exhausted. Add funds in Lovable workspace."
+          : "AI request failed. Please try again.";
+    return { error: safe, status: r.status };
   }
   const data = await r.json();
   return { data };
@@ -101,6 +108,23 @@ Deno.serve(async (req) => {
   try {
     const { mode, prompt, context, target, history, count } = await req.json();
 
+    // Input size limits to prevent abuse
+    const MAX_PROMPT = 20_000;
+    const MAX_HISTORY = 50;
+    const MAX_MSG = 8_000;
+    if (typeof prompt === "string" && prompt.length > MAX_PROMPT) {
+      return new Response(JSON.stringify({ error: "Prompt too long." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const safeHistory = Array.isArray(history)
+      ? history
+          .slice(-MAX_HISTORY)
+          .filter((m: any) => m && typeof m.role === "string" && typeof m.content === "string")
+          .map((m: any) => ({ role: m.role, content: String(m.content).slice(0, MAX_MSG) }))
+      : [];
+
     // Streaming chat
     if (mode === "chat-simple" || mode === "chat-advanced" || mode === "chat-eli10") {
       const apiKey = Deno.env.get("LOVABLE_API_KEY");
@@ -108,8 +132,8 @@ Deno.serve(async (req) => {
 
       const messages = [
         { role: "system", content: SYSTEM_PROMPTS[mode] },
-        ...(history || []),
-        { role: "user", content: prompt },
+        ...safeHistory,
+        { role: "user", content: String(prompt || "").slice(0, MAX_PROMPT) },
       ];
 
       const r = await fetch(GATEWAY, {
@@ -130,7 +154,8 @@ Deno.serve(async (req) => {
         });
       if (!r.ok || !r.body) {
         const t = await r.text();
-        return new Response(JSON.stringify({ error: t || "AI gateway error" }), {
+        console.error("ai-study stream gateway error", r.status, t);
+        return new Response(JSON.stringify({ error: "AI request failed. Please try again." }), {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
