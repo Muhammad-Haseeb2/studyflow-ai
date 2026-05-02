@@ -14,11 +14,18 @@ export async function streamChat(opts: {
   onError?: (msg: string) => void;
   signal?: AbortSignal;
 }) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  if (!token) {
+    opts.onError?.("You must be signed in to use the AI coach.");
+    throw new Error("Not authenticated");
+  }
   const resp = await fetch(FUNCTIONS_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${ANON}`,
+      apikey: ANON,
+      Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({ mode: opts.mode, prompt: opts.prompt, history: opts.history }),
     signal: opts.signal,
