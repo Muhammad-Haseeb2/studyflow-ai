@@ -55,7 +55,14 @@ async function callAI(messages: any[], opts: { model?: string; tools?: any[]; to
 
   if (!r.ok) {
     const text = await r.text();
-    return { error: text, status: r.status };
+    console.error("ai-study gateway error", r.status, text);
+    const safe =
+      r.status === 429
+        ? "Rate limit reached, please slow down."
+        : r.status === 402
+          ? "AI credits exhausted. Add funds in Lovable workspace."
+          : "AI request failed. Please try again.";
+    return { error: safe, status: r.status };
   }
   const data = await r.json();
   return { data };
