@@ -91,8 +91,42 @@ function buildSystemPrompt(opts: {
   ].join("\n");
 }
 
+async function verifyAuth(req: Request): Promise<Response | null> {
+  const authHeader = req.headers.get("Authorization");
+  const token = authHeader?.replace("Bearer ", "");
+  if (!token) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  try {
+    const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2.45.0");
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+    );
+    const { data, error } = await supabase.auth.getUser(token);
+    if (error || !data?.user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    return null;
+  } catch {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  const unauthorized = await verifyAuth(req);
+  if (unauthorized) return unauthorized;
 
   try {
     const {
@@ -150,8 +184,9 @@ Deno.serve(async (req) => {
       if (!resp.ok) {
         const status = resp.status;
         const t = await resp.text();
+        console.error("ai-assignment analyze error", status, t);
         return new Response(
-          JSON.stringify({ error: status === 429 ? "Rate limit exceeded. Try again shortly." : status === 402 ? "AI credits exhausted. Add credits in Workspace settings." : "Analysis failed", detail: t }),
+          JSON.stringify({ error: status === 429 ? "Rate limit exceeded. Try again shortly." : status === 402 ? "AI credits exhausted. Add credits in Workspace settings." : "Analysis failed" }),
           { status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
@@ -197,7 +232,6 @@ Deno.serve(async (req) => {
               : status === 402
                 ? "AI credits exhausted. Add credits in Workspace settings."
                 : "Generation failed",
-          detail: t,
         }),
         { status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
